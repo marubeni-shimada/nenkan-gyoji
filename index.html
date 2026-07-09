@@ -25,6 +25,10 @@
   .btn-g{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .btn-g:hover{background:#f1f5f9}
   .btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+  .btn-edit{background:#eef2ff;color:#3949ab;border:1px solid #cfd8ff}
+  .btn-edit:hover{background:#e0e7ff}
+  .btn-del{background:#fef2f2;color:#dc2626;border:1px solid #fbcaca}
+  .btn-del:hover{background:#fee2e2}
 
   /* レイアウト */
   .app{max-width:1200px;margin:0 auto;padding:22px;display:grid;grid-template-columns:220px 1fr;gap:22px;align-items:start}
@@ -237,8 +241,8 @@
     <div class="modal-body" id="dt_body"></div>
     <div class="modal-foot">
       <button class="btn btn-g" onclick="closeModal('detailModal')">閉じる</button>
-      <button class="btn btn-g" onclick="delFromDetail()">削除</button>
-      <button class="btn btn-p" onclick="editFromDetail()">編集</button>
+      <button class="btn btn-del" onclick="delFromDetail()">削除</button>
+      <button class="btn btn-edit" onclick="editFromDetail()">編集</button>
     </div>
   </div>
 </div>
@@ -671,8 +675,8 @@ function render(){
         </div>
         <span class="badge ${stCls}" style="cursor:pointer" title="クリックで切替" onclick="toggleStatus('${e.id}')">${stTxt}</span>
         <div class="tools">
-          <button class="btn btn-g btn-sm" onclick="edit('${e.id}')">編集</button>
-          <button class="btn btn-g btn-sm" onclick="del('${e.id}')">削除</button>
+          <button class="btn btn-edit btn-sm" onclick="edit('${e.id}')">編集</button>
+          <button class="btn btn-del btn-sm" onclick="del('${e.id}')">削除</button>
         </div>
       </div>`;
     }
