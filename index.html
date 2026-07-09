@@ -69,7 +69,12 @@
   .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
   .b-plan{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
   .b-fixed{background:#dcfce7;color:#15803d;border:1px solid #86efac}
-  .ev-note{font-size:11px;color:var(--sub)}
+  .dept-chip{display:inline-block;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:20px;padding:1px 9px;font-size:11.5px;font-weight:600}
+  .ev-owner{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:6px}
+  .own-chip{display:inline-block;background:#eef2ff;color:#3949ab;border:1px solid #dfe4ff;border-radius:20px;padding:2px 11px;font-size:12px;font-weight:600}
+  .lbl{font-size:10.5px;font-weight:700;color:var(--sub);background:#eef2f7;border-radius:5px;padding:2px 7px;flex:none}
+  .ev-note{font-size:12.5px;margin-top:7px;background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 11px;color:#475569;display:flex;gap:8px;align-items:flex-start}
+  .ev-note span:last-child{line-height:1.5}
   .tools{display:flex;gap:6px;flex:none}
   .empty{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:44px;text-align:center;color:var(--sub)}
   .muted{color:var(--sub);font-size:12px}
@@ -443,7 +448,7 @@ function buildDeptChecks(){
 function refreshOwnerChecks(ensure){
   const keep = new Set([...getChecked("owner"), ...(ensure||[])]);
   let names = currentOwnerList();
-  (ensure||[]).forEach(n=>{ if(!names.includes(n)) names.push(n); });
+  keep.forEach(n=>{ if(!names.includes(n)) names.push(n); });  // 選択済みは候補から消えても残す
   fillChecks("f_owner", "owner", names);
   setChecked("owner", [...keep]);
 }
@@ -645,16 +650,19 @@ function render(){
       const wcls = dt? (dt.getDay()===0?"sun":dt.getDay()===6?"sat":"") : "";
       const stCls = e.status==="fixed"?"b-fixed":"b-plan";
       const stTxt = e.status==="fixed"?"確定":"予定";
-      const meta = [
-        `<span class="cat" style="background:${catColor(e.cat)}">${esc(e.cat)}</span>`,
-        e.org?esc(e.org):"", e.owner?esc(e.owner):""
-      ].filter(Boolean).join(" ・ ");
+      const orgHTML = splitList(e.org).map(o=>`<span class="dept-chip">${esc(o)}</span>`).join("");
+      const owners = splitList(e.owner);
+      const ownerHTML = owners.length
+        ? `<div class="ev-owner"><span class="lbl">担当</span>${owners.map(o=>`<span class="own-chip">${esc(o)}</span>`).join("")}</div>`
+        : "";
+      const noteHTML = e.note ? `<div class="ev-note"><span class="lbl">備考</span><span>${esc(e.note)}</span></div>` : "";
       html += `<div class="ev-row">
         <div class="ev-date ${wcls}"><div class="d">${dd}</div><div class="w">${wd}</div></div>
         <div class="ev-main">
           <div class="t">${esc(e.name)}</div>
-          <div class="m">${meta}</div>
-          ${e.note?`<div class="ev-note">${esc(e.note)}</div>`:""}
+          <div class="m"><span class="cat" style="background:${catColor(e.cat)}">${esc(e.cat)}</span>${orgHTML}</div>
+          ${ownerHTML}
+          ${noteHTML}
         </div>
         <span class="badge ${stCls}" style="cursor:pointer" title="クリックで切替" onclick="toggleStatus('${e.id}')">${stTxt}</span>
         <div class="tools">
