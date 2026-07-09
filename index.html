@@ -19,9 +19,12 @@
        border-radius:8px;background:#fff;color:var(--ink);outline:none}
   select:focus,input:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
   label{font-size:12px;color:var(--sub);font-weight:600;display:block;margin-bottom:4px}
-  .btn{cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:14px;font-weight:600;transition:.15s}
-  .btn-p{background:var(--brand);color:#fff}
-  .btn-p:hover{background:var(--brand-d)}
+  .btn{cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:14px;font-weight:600;
+       transition:transform .12s ease, box-shadow .15s ease, background .15s ease;box-shadow:0 1px 2px rgba(15,23,42,.08)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,23,42,.12)}
+  .btn:active{transform:translateY(0) scale(.98);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+  .btn-p{background:var(--brand);color:#fff;box-shadow:0 3px 10px rgba(37,99,235,.32)}
+  .btn-p:hover{background:var(--brand-d);box-shadow:0 6px 18px rgba(37,99,235,.42)}
   .btn-g{background:#fff;color:var(--ink);border:1px solid var(--line)}
   .btn-g:hover{background:#f1f5f9}
   .btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
@@ -60,8 +63,8 @@
   .month-h .n{background:var(--brand);color:#fff;border-radius:20px;padding:3px 14px;font-size:13px;font-weight:700}
   .month-h .cnt{color:var(--sub);font-size:12px}
   .rows{display:flex;flex-direction:column;gap:9px}
-  .ev-row{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 15px;transition:.12s}
-  .ev-row:hover{border-color:#cdd6e4;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+  .ev-row{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 15px;transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;animation:fadeUp .35s ease both}
+  .ev-row:hover{border-color:#c3d2ea;transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.10)}
   .ev-date{text-align:center;min-width:42px}
   .ev-date .d{font-size:18px;font-weight:800;line-height:1}
   .ev-date .w{font-size:10px;color:var(--sub);margin-top:2px}
@@ -137,6 +140,30 @@
   .cal-ev{font-size:11px;color:#fff;border-radius:5px;padding:2px 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cal-ev.plan{opacity:.65}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+
+  /* アニメーション */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes modalIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+  .month{animation:fadeUp .4s ease both}
+  .yr-cell{transition:transform .15s ease, box-shadow .15s ease;animation:fadeUp .35s ease both}
+  .yr-cell:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.10)}
+  .modal.on .modal-card{animation:modalIn .22s cubic-bezier(.2,.8,.2,1) both}
+  .nav a{transition:background .15s ease, color .15s ease, transform .1s ease}
+  .nav a:active{transform:scale(.98)}
+  .cal-ev{transition:transform .1s ease, filter .1s ease}
+  .cal-ev:hover{transform:scale(1.04);filter:brightness(1.05)}
+  .badge{transition:transform .1s ease}
+  .badge:hover{transform:scale(1.06)}
+  .adm-chip{transition:transform .1s ease}
+  .adm-chip:hover{transform:translateY(-1px)}
+
+  /* 備考リッチテキスト */
+  .rte-tb{display:flex;gap:4px;margin-bottom:6px}
+  .rte-tb button{width:32px;height:28px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;font-size:13px;color:var(--ink);transition:.12s;box-shadow:0 1px 2px rgba(15,23,42,.06)}
+  .rte-tb button:hover{background:#f1f5f9;transform:translateY(-1px)}
+  .rte{border:1px solid var(--line);border-radius:9px;padding:9px 11px;min-height:64px;font-size:14px;outline:none;background:#fff;line-height:1.6}
+  .rte:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .rte:empty:before{content:attr(data-ph);color:#9aa4b2}
 
   /* ローディング */
   #loading{position:fixed;inset:0;background:rgba(248,250,252,.6);display:none;align-items:center;justify-content:center;z-index:1200}
@@ -234,7 +261,14 @@
         </div>
         <div class="fg2">
           <label>備考・詳細メモ</label>
-          <textarea id="f_note" rows="2" placeholder="補足・相談事項など" style="width:100%;resize:vertical"></textarea>
+          <div class="rte-tb">
+            <button type="button" onmousedown="return false" onclick="rteCmd('bold')" title="太字"><b>B</b></button>
+            <button type="button" onmousedown="return false" onclick="rteCmd('underline')" title="下線"><u>U</u></button>
+            <button type="button" onmousedown="return false" onclick="rteCmd('foreColor','#e11d48')" title="赤文字" style="color:#e11d48"><b>A</b></button>
+            <button type="button" onmousedown="return false" onclick="rteCmd('insertUnorderedList')" title="箇条書き">•</button>
+            <button type="button" onmousedown="return false" onclick="rteCmd('removeFormat')" title="書式クリア">✕</button>
+          </div>
+          <div id="f_note" class="rte" contenteditable="true" data-ph="補足・相談事項など（文字を選んで B で太字など）"></div>
         </div>
       </div>
     </div>
@@ -494,6 +528,14 @@ function fillFY(){
 /* ===== モーダル ===== */
 function showModal(id){ document.getElementById(id).classList.add("on"); }
 function closeModal(id){ document.getElementById(id).classList.remove("on"); }
+/* 備考リッチテキスト：装飾コマンド／簡易サニタイズ */
+function rteCmd(cmd, val){ document.getElementById("f_note").focus(); document.execCommand(cmd, false, val||null); }
+function noteClean(html){
+  let s = (html||"").replace(/<div><br><\/div>/gi,"").trim();
+  if(s.replace(/<br\s*\/?>/gi,"").replace(/&nbsp;/g,"").trim()==="") return "";  // 実質空なら空文字
+  return s;
+}
+
 function openForm(){
   resetForm();
   document.getElementById("formTitle").textContent = "行事を追加";
@@ -517,7 +559,7 @@ function openDetail(eid){
     <div class="dt-row"><span class="dt-l">部署</span><span>${esc(e.org)||'—'}</span></div>
     <div class="dt-row"><span class="dt-l">担当者</span><span>${esc(e.owner)||'—'}</span></div>
     <div class="dt-row"><span class="dt-l">状態</span><span class="badge ${stCls}">${stTxt}</span></div>
-    <div class="dt-row"><span class="dt-l">備考</span><span>${esc(e.note)||'—'}</span></div>`;
+    <div class="dt-row"><span class="dt-l">備考</span><span>${e.note||'—'}</span></div>`;
   showModal("detailModal");
 }
 function editFromDetail(){ closeModal("detailModal"); if(detailId) edit(detailId); }
@@ -534,7 +576,7 @@ async function save(){
     org:    getChecked("org").join("、"),
     owner:  getChecked("owner").join("、"),
     status: document.getElementById("f_status").value,
-    note:   document.getElementById("f_note").value.trim(),
+    note:   noteClean(document.getElementById("f_note").innerHTML),
   };
   const ev = editId ? {...events.find(e=>e.id===editId), ...obj} : {id:id(), ...obj};
   const btn = document.getElementById("saveBtn"); btn.disabled = true;
@@ -553,7 +595,7 @@ function edit(eid){
   document.getElementById("f_cat").value=e.cat;
   document.getElementById("f_date").value=e.date||"";
   document.getElementById("f_status").value=e.status;
-  document.getElementById("f_note").value=e.note||"";
+  document.getElementById("f_note").innerHTML=e.note||"";
   setChecked("org", splitList(e.org));
   refreshOwnerChecks(splitList(e.owner));
   document.getElementById("formTitle").textContent = "行事を編集";
@@ -571,7 +613,8 @@ async function toggleStatus(eid){
 }
 function resetForm(){
   editId=null;
-  ["f_name","f_date","f_note"].forEach(i=>document.getElementById(i).value="");
+  ["f_name","f_date"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("f_note").innerHTML="";
   setChecked("org", []);
   refreshOwnerChecks();
   document.getElementById("f_cat").selectedIndex=0;
@@ -673,7 +716,7 @@ function render(){
       const ownerHTML = owners.length
         ? `<div class="ev-owner"><span class="lbl">担当</span>${owners.map(o=>`<span class="own-chip">${esc(o)}</span>`).join("")}</div>`
         : "";
-      const noteHTML = e.note ? `<div class="ev-note"><span class="lbl">備考</span><span>${esc(e.note)}</span></div>` : "";
+      const noteHTML = e.note ? `<div class="ev-note"><span class="lbl">備考</span><span>${e.note}</span></div>` : "";
       html += `<div class="ev-row">
         <div class="ev-date ${wcls}"><div class="d">${dd}</div><div class="w">${wd}</div></div>
         <div class="ev-main">
