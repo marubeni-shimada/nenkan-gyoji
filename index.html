@@ -429,8 +429,8 @@ function setChecked(name, arr){ document.querySelectorAll(`input[name="${name}"]
 function splitList(v){ return (v||"").split(/[,、]/).map(s=>s.trim()).filter(Boolean); }
 function currentOwnerList(){
   const cd = getChecked("org");
-  if(!cd.length) return [];                                // 部署未選択なら候補を出さない
-  const groups = ["全体", ...cd.map(d=>d+"全体")];         // 全体・◯◯部全体
+  if(!cd.length) return ["全体"];                          // 部署未選択：全体のみ
+  const groups = cd.map(d=>d+"全体");                      // ◯◯部全体（全体は非表示）
   const names = members.filter(m=>cd.includes(m.dept)).map(m=>m.name);
   return [...new Set([...groups, ...names])];
 }
