@@ -60,6 +60,10 @@
   .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
   .legend span{font-size:11px;display:inline-flex;align-items:center;gap:5px;color:var(--sub)}
   .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+  /* 複数選択（チェックボックス） */
+  .checks{display:flex;flex-wrap:wrap;gap:5px 12px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#fff;max-height:104px;overflow:auto}
+  .chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);font-weight:500;cursor:pointer;white-space:nowrap}
+  .chk input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer}
   /* カレンダー */
   .viewtabs{display:flex;gap:4px}
   .viewtabs .btn{border:1px solid var(--line);background:#fff;color:var(--sub)}
@@ -110,19 +114,20 @@
         <input id="f_project" type="text" placeholder="関連案件" style="width:100%">
       </div>
       <div>
-        <label>部署</label>
-        <select id="f_org" style="width:100%"></select>
-      </div>
-      <div>
-        <label>担当者</label>
-        <input id="f_owner" type="text" placeholder="担当者名" style="width:100%">
-      </div>
-      <div>
         <label>ステータス</label>
         <select id="f_status" style="width:100%">
           <option value="plan">予定（予測値）</option>
           <option value="fixed">確定</option>
         </select>
+      </div>
+
+      <div class="g2">
+        <label>部署（複数選択可）</label>
+        <div id="f_org" class="checks"></div>
+      </div>
+      <div class="g2">
+        <label>担当者（複数選択可）</label>
+        <div id="f_owner" class="checks"></div>
       </div>
 
       <div class="g4">
@@ -196,6 +201,7 @@ const CATS = [
   {name:"その他",           color:"var(--c6)"},
 ];
 const DEPTS = ["土木部","営業部","統括管理部","CP部"];
+const OWNERS = ["池田","佐藤","山本","鈴木","田中","高橋"]; // ★実際の担当者名に差し替え
 const MONTH_ORDER = [7,8,9,10,11,12,1,2,3,4,5,6]; // 年度順
 const KEY = "annual_events_v1";
 
@@ -276,9 +282,22 @@ function fillCatSelects(){
   const opt = CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join("");
   document.getElementById("f_cat").innerHTML = opt;
   document.getElementById("catFilter").innerHTML = `<option value="">すべて</option>`+opt;
-  document.getElementById("f_org").innerHTML =
-    `<option value="">（未設定）</option>` + DEPTS.map(d=>`<option value="${d}">${d}</option>`).join("");
+  fillChecks("f_org", "org", DEPTS);
+  fillChecks("f_owner", "owner", OWNERS);
 }
+
+/* 複数選択チェックボックスのユーティリティ */
+function fillChecks(containerId, name, items){
+  document.getElementById(containerId).innerHTML =
+    items.map(v=>`<label class="chk"><input type="checkbox" name="${name}" value="${esc(v)}">${esc(v)}</label>`).join("");
+}
+function getChecked(name){
+  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el=>el.value);
+}
+function setChecked(name, arr){
+  document.querySelectorAll(`input[name="${name}"]`).forEach(el=>{ el.checked = arr.includes(el.value); });
+}
+function splitList(v){ return (v||"").split(/[,、]/).map(s=>s.trim()).filter(Boolean); }
 function fillFY(){
   const fys = [...new Set(events.map(e=>fyOf(e.date)).filter(v=>v!==null))].sort((a,b)=>b-a);
   if(fys.length===0) fys.push(new Date().getMonth()+1>=7?new Date().getFullYear():new Date().getFullYear()-1);
@@ -296,8 +315,8 @@ async function save(){
     cat:    document.getElementById("f_cat").value,
     date:   document.getElementById("f_date").value,
     project:document.getElementById("f_project").value.trim(),
-    org:    document.getElementById("f_org").value.trim(),
-    owner:  document.getElementById("f_owner").value.trim(),
+    org:    getChecked("org").join("、"),
+    owner:  getChecked("owner").join("、"),
     status: document.getElementById("f_status").value,
     note:   document.getElementById("f_note").value.trim(),
   };
@@ -314,8 +333,9 @@ function edit(eid){
   const e = events.find(x=>x.id===eid); if(!e) return;
   editId = eid;
   f_name.value=e.name; f_cat.value=e.cat; f_date.value=e.date||"";
-  f_project.value=e.project||""; f_org.value=e.org||""; f_owner.value=e.owner||"";
-  f_status.value=e.status; f_note.value=e.note||"";
+  f_project.value=e.project||""; f_status.value=e.status; f_note.value=e.note||"";
+  setChecked("org", splitList(e.org));
+  setChecked("owner", splitList(e.owner));
   document.getElementById("saveBtn").textContent="✔ 更新する";
   document.getElementById("cancelBtn").style.display="inline-block";
   document.getElementById("editHint").textContent="編集中：「"+e.name+"」";
@@ -335,7 +355,8 @@ async function toggleStatus(eid){
 
 function resetForm(){
   editId=null;
-  ["f_name","f_date","f_project","f_org","f_owner","f_note"].forEach(i=>document.getElementById(i).value="");
+  ["f_name","f_date","f_project","f_note"].forEach(i=>document.getElementById(i).value="");
+  setChecked("org", []); setChecked("owner", []);
   document.getElementById("f_cat").selectedIndex=0;
   document.getElementById("f_status").value="plan";
   document.getElementById("saveBtn").textContent="＋ 追加する";
