@@ -127,7 +127,7 @@
         <label>ステータス</label>
         <select id="f_status" style="width:100%">
           <option value="plan">予定</option>
-          <option value="fixed">確認</option>
+          <option value="fixed">確定</option>
         </select>
       </div>
 
@@ -193,7 +193,7 @@
         <select id="stFilter" onchange="render()">
           <option value="">すべて</option>
           <option value="plan">予定のみ</option>
-          <option value="fixed">確認のみ</option>
+          <option value="fixed">確定のみ</option>
         </select>
       </div>
     </div>
@@ -212,7 +212,7 @@
   <!-- 集計 -->
   <div class="card stat">
     <div><b id="s_total">0</b><small>件 合計</small></div>
-    <div><b id="s_fixed" style="color:var(--fixed)">0</b><small>確認</small></div>
+    <div><b id="s_fixed" style="color:var(--fixed)">0</b><small>確定</small></div>
     <div><b id="s_plan" style="color:var(--plan)">0</b><small>予定</small></div>
     <div style="flex:1;min-width:200px">
       <small>カテゴリー凡例</small>
@@ -571,7 +571,7 @@ function render(){
     for(const e of rows){
       const d = e.date? e.date.slice(5).replace("-","/") : "—";
       const stCls = e.status==="fixed"?"b-fixed":"b-plan";
-      const stTxt = e.status==="fixed"?"確認":"予定";
+      const stTxt = e.status==="fixed"?"確定":"予定";
       html += `<tr class="${e.status==='plan'?'row-plan':''}">
         <td>${d}</td>
         <td><b>${esc(e.name)}</b></td>
