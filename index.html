@@ -464,8 +464,11 @@ function fillCatSelects(){
     CATS.map(c=>`<span><i class="dot" style="background:${c.color}"></i>${c.name}</span>`).join("");
 }
 function fillFY(){
-  const fys = [...new Set(events.map(e=>fyOf(e.date)).filter(v=>v!==null))].sort((a,b)=>b-a);
-  if(fys.length===0) fys.push(new Date().getMonth()+1>=7?new Date().getFullYear():new Date().getFullYear()-1);
+  const now = new Date();
+  const curFy = now.getMonth()+1>=7 ? now.getFullYear() : now.getFullYear()-1;
+  const set = new Set(events.map(e=>fyOf(e.date)).filter(v=>v!==null));
+  set.add(curFy); set.add(curFy+1);   // 今年度・来年度は行事が無くても常に選べる
+  const fys = [...set].sort((a,b)=>b-a);
   const sel = document.getElementById("fyFilter");
   const cur = sel.value;
   sel.innerHTML = fys.map(y=>`<option value="${y}">${y}年度（${y}.7〜${y+1}.6）</option>`).join("");
