@@ -446,11 +446,13 @@ function buildDeptChecks(){
   document.getElementById("f_org").onchange = ()=>refreshOwnerChecks();
 }
 function refreshOwnerChecks(ensure){
-  const keep = new Set([...getChecked("owner"), ...(ensure||[])]);
+  const prev = getChecked("owner");
   let names = currentOwnerList();
-  keep.forEach(n=>{ if(!names.includes(n)) names.push(n); });  // 選択済みは候補から消えても残す
+  (ensure||[]).forEach(n=>{ if(!names.includes(n)) names.push(n); });   // 編集時など、必ず残したい人だけ追加
   fillChecks("f_owner", "owner", names);
-  setChecked("owner", [...keep]);
+  // 今の候補に含まれるチェック済みだけ維持（別部署に移ったら外れる）＋ ensure は必ず維持
+  const keep = [...new Set([...(ensure||[]), ...prev.filter(n=>names.includes(n))])];
+  setChecked("owner", keep);
 }
 
 /* ===== 初期セットアップ ===== */
