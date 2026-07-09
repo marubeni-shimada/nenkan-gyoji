@@ -476,7 +476,8 @@ function fillFY(){
   const sel = document.getElementById("fyFilter");
   const cur = sel.value;
   sel.innerHTML = fys.map(y=>`<option value="${y}">${y}年度（${y}.7〜${y+1}.6）</option>`).join("");
-  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;   // 既に選択中ならそれを維持
+  else sel.value = String(curFy);                              // 初期表示は当年度（日付から自動判定）
 }
 
 /* ===== モーダル ===== */
