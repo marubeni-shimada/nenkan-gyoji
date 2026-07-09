@@ -71,6 +71,12 @@
   .adm-chip button:hover{background:#a5b4fc}
   .adm-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
   .adm-sec{margin-top:16px}
+  /* ローディング */
+  #loading{position:fixed;inset:0;background:rgba(248,250,252,.6);display:none;align-items:center;justify-content:center;z-index:1000}
+  #loading.on{display:flex}
+  .ld-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 28px rgba(0,0,0,.14);font-weight:600;font-size:14px}
+  .spinner{width:20px;height:20px;border:3px solid #dbeafe;border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   /* カレンダー */
   .viewtabs{display:flex;gap:4px}
   .viewtabs .btn{border:1px solid var(--line);background:#fff;color:var(--sub)}
@@ -92,6 +98,7 @@
 </style>
 </head>
 <body>
+<div id="loading"><div class="ld-box"><span class="spinner"></span><span id="ldText">読み込み中…</span></div></div>
 <header>
   <h1>年間行事一覧表（活動表）</h1>
   <p>7月〜6月の年間行事を登録・管理します　｜　シンプル・見やすさ重視</p>
@@ -242,6 +249,10 @@ const KEY_M = "annual_master_v1";
 const API = "https://script.google.com/macros/s/AKfycbzripjEgOUQVoeKb5ORi-5pbaAa15k6qrg-rPUYtxMVOPm_XNiyJnn7E5oh40ZfaTViIA/exec";
 const USE_API = API.indexOf("★") === -1;
 
+/* 名簿管理のパスワード（簡易ロック。本格的な認証ではありません） */
+const ADMIN_PW = "0000";
+let adminUnlocked = false;
+
 /* ===== 状態 ===== */
 let events = [];
 let depts  = [];                 // 部署の名簿
@@ -250,36 +261,48 @@ let editId = null;
 let viewMode = "list";
 let calIdx = null; // 年度内の月インデックス 0=7月 … 11=6月
 
+/* ===== ローディング表示 ===== */
+function setLoading(on, text){
+  const l = document.getElementById("loading");
+  if(text) document.getElementById("ldText").textContent = text;
+  l.classList.toggle("on", !!on);
+}
+
 /* ===== データ取得 ===== */
 async function loadData(){
-  if(USE_API){
-    try{
-      const r = await fetch(API, {method:"GET"});
-      const d = await r.json();
-      events  = Array.isArray(d) ? d : (d.events  || []);
-      depts   = (d && Array.isArray(d.depts))   ? d.depts   : DEFAULT_DEPTS.slice();
-      members = (d && Array.isArray(d.members)) ? d.members : [];
-    }catch(err){
-      document.getElementById("list").innerHTML =
-        `<div class="card empty">データ取得に失敗しました。GASのURL・公開設定を確認してください。<br><small>${esc(String(err))}</small></div>`;
-      events=[]; depts=DEFAULT_DEPTS.slice(); members=[];
+  setLoading(true, "読み込み中…");
+  try{
+    if(USE_API){
+      try{
+        const r = await fetch(API, {method:"GET"});
+        const d = await r.json();
+        events  = Array.isArray(d) ? d : (d.events  || []);
+        depts   = (d && Array.isArray(d.depts))   ? d.depts   : DEFAULT_DEPTS.slice();
+        members = (d && Array.isArray(d.members)) ? d.members : [];
+      }catch(err){
+        document.getElementById("list").innerHTML =
+          `<div class="card empty">データ取得に失敗しました。GASのURL・公開設定を確認してください。<br><small>${esc(String(err))}</small></div>`;
+        events=[]; depts=DEFAULT_DEPTS.slice(); members=[];
+      }
+    }else{
+      try{ const d=JSON.parse(localStorage.getItem(KEY)); events = Array.isArray(d)?d:SAMPLE(); }
+      catch(e){ events = SAMPLE(); }
+      loadLocalMaster();
     }
-  }else{
-    try{ const d=JSON.parse(localStorage.getItem(KEY)); events = Array.isArray(d)?d:SAMPLE(); }
-    catch(e){ events = SAMPLE(); }
-    loadLocalMaster();
-  }
-  if(!depts.length) depts = DEFAULT_DEPTS.slice();
+    if(!depts.length) depts = DEFAULT_DEPTS.slice();
+  }finally{ setLoading(false); }
 }
 
 /* 行事の追加・更新・削除 */
 async function mutate(payload){
   if(USE_API){
+    setLoading(true, "保存中…");
     try{
       const r = await fetch(API, {method:"POST", body: JSON.stringify(payload)}); // text/plain→CORS回避
       const d = await r.json();
       if(d && Array.isArray(d.events)) events = d.events;
     }catch(err){ alert("保存に失敗しました: "+err); }
+    finally{ setLoading(false); }
   }else{
     if(payload.action==="save"){
       const i = events.findIndex(e=>e.id===payload.event.id);
@@ -294,6 +317,7 @@ async function mutate(payload){
 /* 名簿（部署・担当者）の追加・削除 */
 async function masterMutate(payload){
   if(USE_API){
+    setLoading(true, "保存中…");
     try{
       const r = await fetch(API, {method:"POST", body: JSON.stringify(payload)});
       const d = await r.json();
@@ -303,6 +327,7 @@ async function masterMutate(payload){
         if(Array.isArray(d.events))  events  = d.events;
       }
     }catch(err){ alert("保存に失敗しました: "+err); }
+    finally{ setLoading(false); }
   }else{
     applyMasterLocal(payload);
     localStorage.setItem(KEY_M, JSON.stringify({depts, members}));
@@ -456,9 +481,15 @@ function resetForm(){
 /* ===== 名簿管理パネル ===== */
 function toggleAdmin(){
   const p = document.getElementById("adminPanel");
-  const show = p.style.display==="none";
-  p.style.display = show ? "block" : "none";
-  if(show) renderAdmin();
+  if(p.style.display!=="none"){ p.style.display="none"; return; }   // 開いていれば閉じる
+  if(!adminUnlocked){
+    const inp = prompt("名簿管理のパスワードを入力してください");
+    if(inp===null) return;                 // キャンセル
+    if(inp!==ADMIN_PW){ alert("パスワードが違います"); return; }
+    adminUnlocked = true;                   // 以降このセッションは再入力不要
+  }
+  p.style.display = "block";
+  renderAdmin();
 }
 function renderAdmin(){
   document.getElementById("admDepts").innerHTML = depts.length
@@ -616,6 +647,9 @@ function calHTML(list, fy){
 
 /* ===== 初期化 ===== */
 fillCatSelects();
+// 名簿管理：Enterキーで追加
+document.getElementById("admNewMember").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addMember(); }});
+document.getElementById("admNewDept").addEventListener("keydown",   e=>{ if(e.key==="Enter"){ e.preventDefault(); addDept();   }});
 document.getElementById("list").innerHTML = `<div class="card empty">読み込み中…</div>`;
 loadData().then(()=>{
   buildDeptChecks();
