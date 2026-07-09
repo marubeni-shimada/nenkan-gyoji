@@ -61,9 +61,16 @@
   .legend span{font-size:11px;display:inline-flex;align-items:center;gap:5px;color:var(--sub)}
   .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
   /* 複数選択（チェックボックス） */
-  .checks{display:flex;flex-wrap:wrap;gap:5px 12px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#fff;max-height:104px;overflow:auto}
+  .checks{display:flex;flex-wrap:wrap;gap:5px 12px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:#fff;max-height:104px;overflow:auto;min-height:38px}
   .chk{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--ink);font-weight:500;cursor:pointer;white-space:nowrap}
   .chk input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer}
+  .checks .muted{margin:0}
+  /* 名簿管理 */
+  .adm-chip{display:inline-flex;align-items:center;gap:7px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:20px;padding:3px 6px 3px 12px;font-size:12.5px;font-weight:600;margin:3px 3px 3px 0}
+  .adm-chip button{border:none;background:#c7d2fe;color:#3730a3;border-radius:50%;width:18px;height:18px;cursor:pointer;font-size:11px;line-height:1;padding:0;font-weight:700}
+  .adm-chip button:hover{background:#a5b4fc}
+  .adm-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}
+  .adm-sec{margin-top:16px}
   /* カレンダー */
   .viewtabs{display:flex;gap:4px}
   .viewtabs .btn{border:1px solid var(--line);background:#fff;color:var(--sub)}
@@ -126,7 +133,7 @@
         <div id="f_org" class="checks"></div>
       </div>
       <div class="g2">
-        <label>担当者（複数選択可）</label>
+        <label>担当者（複数選択可 / 選んだ部署の人が表示されます）</label>
         <div id="f_owner" class="checks"></div>
       </div>
 
@@ -139,6 +146,31 @@
       <button class="btn btn-p" id="saveBtn" onclick="save()">＋ 追加する</button>
       <button class="btn btn-g" id="cancelBtn" onclick="resetForm()" style="display:none">キャンセル</button>
       <span id="editHint" class="muted"></span>
+    </div>
+  </div>
+
+  <!-- 名簿管理（部署・担当者） -->
+  <div class="card" id="adminPanel" style="display:none;padding:18px 20px;margin-bottom:20px">
+    <h2 style="margin:0 0 4px;font-size:15px">👥 名簿管理（部署・担当者）</h2>
+    <p class="muted" style="margin:0 0 6px">ここで追加・削除するとスプレッドシートに保存され、入力フォームのプルダウンに反映されます。</p>
+
+    <div class="adm-sec">
+      <label>部署</label>
+      <div id="admDepts"></div>
+      <div class="adm-row">
+        <input id="admNewDept" type="text" placeholder="新しい部署名">
+        <button class="btn btn-g btn-sm" onclick="addDept()">＋ 部署を追加</button>
+      </div>
+    </div>
+
+    <div class="adm-sec">
+      <label>担当者を追加する部署</label>
+      <div class="adm-row">
+        <select id="admDeptSel" style="min-width:150px"></select>
+        <input id="admNewMember" type="text" placeholder="担当者名">
+        <button class="btn btn-g btn-sm" onclick="addMember()">＋ 担当者を追加</button>
+      </div>
+      <div id="admMembers" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -163,6 +195,7 @@
       </div>
     </div>
     <div class="bar-l" style="align-items:flex-end">
+      <button class="btn btn-g" onclick="toggleAdmin()">⚙ 名簿管理</button>
       <div>
         <label>表示</label>
         <div class="viewtabs">
@@ -200,47 +233,50 @@ const CATS = [
   {name:"出張",             color:"var(--c5)"},
   {name:"その他",           color:"var(--c6)"},
 ];
-const DEPTS = ["土木部","営業部","統括管理部","CP部"];
-const OWNERS = ["池田","佐藤","山本","鈴木","田中","高橋"]; // ★実際の担当者名に差し替え
+const DEFAULT_DEPTS = ["土木部","営業部","統括管理部","CP部"]; // 初回・取得失敗時のみ使用
 const MONTH_ORDER = [7,8,9,10,11,12,1,2,3,4,5,6]; // 年度順
 const KEY = "annual_events_v1";
+const KEY_M = "annual_master_v1";
 
-/* ★★ GAS連携設定 ★★
-   デプロイしたGASウェブアプリのURL（.../exec）を下に貼り付けてください。
-   未設定（★のまま）の場合は、ブラウザ内保存のデモモードで動作します。 */
+/* ★★ GAS連携設定 ★★ URL未設定(★のまま)ならブラウザ内保存のデモモード */
 const API = "https://script.google.com/macros/s/AKfycbzripjEgOUQVoeKb5ORi-5pbaAa15k6qrg-rPUYtxMVOPm_XNiyJnn7E5oh40ZfaTViIA/exec";
 const USE_API = API.indexOf("★") === -1;
 
-/* ===== データ ===== */
+/* ===== 状態 ===== */
 let events = [];
+let depts  = [];                 // 部署の名簿
+let members = [];                // [{dept, name}] 担当者の名簿
 let editId = null;
 let viewMode = "list";
 let calIdx = null; // 年度内の月インデックス 0=7月 … 11=6月
 
-/* 一覧取得：APIモードはGASから、デモモードはブラウザ内から */
+/* ===== データ取得 ===== */
 async function loadData(){
   if(USE_API){
     try{
       const r = await fetch(API, {method:"GET"});
       const d = await r.json();
-      events = Array.isArray(d) ? d : (d.events || []);
+      events  = Array.isArray(d) ? d : (d.events  || []);
+      depts   = (d && Array.isArray(d.depts))   ? d.depts   : DEFAULT_DEPTS.slice();
+      members = (d && Array.isArray(d.members)) ? d.members : [];
     }catch(err){
       document.getElementById("list").innerHTML =
         `<div class="card empty">データ取得に失敗しました。GASのURL・公開設定を確認してください。<br><small>${esc(String(err))}</small></div>`;
-      events = [];
+      events=[]; depts=DEFAULT_DEPTS.slice(); members=[];
     }
   }else{
-    try{ const d = JSON.parse(localStorage.getItem(KEY)); events = Array.isArray(d) ? d : SAMPLE(); }
+    try{ const d=JSON.parse(localStorage.getItem(KEY)); events = Array.isArray(d)?d:SAMPLE(); }
     catch(e){ events = SAMPLE(); }
+    loadLocalMaster();
   }
+  if(!depts.length) depts = DEFAULT_DEPTS.slice();
 }
 
-/* 追加・更新・削除：APIモードはGASへPOST、デモモードはブラウザ内で処理 */
+/* 行事の追加・更新・削除 */
 async function mutate(payload){
   if(USE_API){
     try{
-      // 文字列bodyにすることでContent-Typeがtext/plainになり、CORSプリフライトを回避
-      const r = await fetch(API, {method:"POST", body: JSON.stringify(payload)});
+      const r = await fetch(API, {method:"POST", body: JSON.stringify(payload)}); // text/plain→CORS回避
       const d = await r.json();
       if(d && Array.isArray(d.events)) events = d.events;
     }catch(err){ alert("保存に失敗しました: "+err); }
@@ -253,6 +289,40 @@ async function mutate(payload){
     }
     localStorage.setItem(KEY, JSON.stringify(events));
   }
+}
+
+/* 名簿（部署・担当者）の追加・削除 */
+async function masterMutate(payload){
+  if(USE_API){
+    try{
+      const r = await fetch(API, {method:"POST", body: JSON.stringify(payload)});
+      const d = await r.json();
+      if(d){
+        if(Array.isArray(d.depts))   depts   = d.depts;
+        if(Array.isArray(d.members)) members = d.members;
+        if(Array.isArray(d.events))  events  = d.events;
+      }
+    }catch(err){ alert("保存に失敗しました: "+err); }
+  }else{
+    applyMasterLocal(payload);
+    localStorage.setItem(KEY_M, JSON.stringify({depts, members}));
+  }
+  if(!depts.length) depts = DEFAULT_DEPTS.slice();
+}
+
+function applyMasterLocal(p){
+  if(p.action==="addDept"){ if(p.name && !depts.includes(p.name)) depts.push(p.name); }
+  else if(p.action==="delDept"){ depts = depts.filter(d=>d!==p.name); members = members.filter(m=>m.dept!==p.name); }
+  else if(p.action==="addMember"){ if(p.dept && p.name && !members.some(m=>m.dept===p.dept&&m.name===p.name)) members.push({dept:p.dept,name:p.name}); }
+  else if(p.action==="delMember"){ members = members.filter(m=>!(m.dept===p.dept&&m.name===p.name)); }
+}
+function loadLocalMaster(){
+  try{ const d=JSON.parse(localStorage.getItem(KEY_M)); if(d){ depts=d.depts||DEFAULT_DEPTS.slice(); members=d.members||[]; return; } }catch(e){}
+  depts = DEFAULT_DEPTS.slice();
+  members = [
+    {dept:"統括管理部",name:"池田"},{dept:"統括管理部",name:"佐藤"},
+    {dept:"営業部",name:"山本"},{dept:"CP部",name:"鈴木"},{dept:"土木部",name:"田中"},
+  ];
 }
 
 function SAMPLE(){
@@ -273,31 +343,49 @@ function id(){ return Date.now().toString(36)+Math.random().toString(36).slice(2
 function fyOf(dateStr){
   if(!dateStr) return null;
   const d = new Date(dateStr); const y=d.getFullYear(), m=d.getMonth()+1;
-  return m>=7 ? y : y-1; // 例)2026-07 → FY2026, 2027-03 → FY2026
+  return m>=7 ? y : y-1;
 }
 function catColor(name){ const c=CATS.find(x=>x.name===name); return c?c.color:"var(--c6)"; }
+
+/* ===== 複数選択チェックボックス ===== */
+function fillChecks(containerId, name, items){
+  const box = document.getElementById(containerId);
+  box.innerHTML = items.length
+    ? items.map(v=>`<label class="chk"><input type="checkbox" name="${name}" value="${esc(v)}">${esc(v)}</label>`).join("")
+    : `<span class="muted">${name==="owner"?"（部署を選ぶと候補が出ます）":"未登録"}</span>`;
+}
+function getChecked(name){ return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el=>el.value); }
+function setChecked(name, arr){ document.querySelectorAll(`input[name="${name}"]`).forEach(el=>{ el.checked = arr.includes(el.value); }); }
+function splitList(v){ return (v||"").split(/[,、]/).map(s=>s.trim()).filter(Boolean); }
+
+/* 選択中の部署に属する担当者リスト（部署未選択なら全員） */
+function currentOwnerList(){
+  const cd = getChecked("org");
+  const names = cd.length ? members.filter(m=>cd.includes(m.dept)).map(m=>m.name) : members.map(m=>m.name);
+  return [...new Set(names)];
+}
+/* 部署チェックボックスを再構築（選択状態は維持） */
+function buildDeptChecks(){
+  const prev = getChecked("org");
+  fillChecks("f_org", "org", depts);
+  setChecked("org", prev);
+  document.getElementById("f_org").onchange = ()=>refreshOwnerChecks();
+}
+/* 担当者チェックボックスを再構築。ensure=編集時など必ず残したい名前 */
+function refreshOwnerChecks(ensure){
+  const keep = new Set([...getChecked("owner"), ...(ensure||[])]);
+  let names = currentOwnerList();
+  (ensure||[]).forEach(n=>{ if(!names.includes(n)) names.push(n); });
+  fillChecks("f_owner", "owner", names);
+  setChecked("owner", [...keep]);
+}
 
 /* ===== フォーム ===== */
 function fillCatSelects(){
   const opt = CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join("");
   document.getElementById("f_cat").innerHTML = opt;
   document.getElementById("catFilter").innerHTML = `<option value="">すべて</option>`+opt;
-  fillChecks("f_org", "org", DEPTS);
-  fillChecks("f_owner", "owner", OWNERS);
 }
-
-/* 複数選択チェックボックスのユーティリティ */
-function fillChecks(containerId, name, items){
-  document.getElementById(containerId).innerHTML =
-    items.map(v=>`<label class="chk"><input type="checkbox" name="${name}" value="${esc(v)}">${esc(v)}</label>`).join("");
-}
-function getChecked(name){
-  return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el=>el.value);
-}
-function setChecked(name, arr){
-  document.querySelectorAll(`input[name="${name}"]`).forEach(el=>{ el.checked = arr.includes(el.value); });
-}
-function splitList(v){ return (v||"").split(/[,、]/).map(s=>s.trim()).filter(Boolean); }
 function fillFY(){
   const fys = [...new Set(events.map(e=>fyOf(e.date)).filter(v=>v!==null))].sort((a,b)=>b-a);
   if(fys.length===0) fys.push(new Date().getMonth()+1>=7?new Date().getFullYear():new Date().getFullYear()-1);
@@ -335,7 +423,7 @@ function edit(eid){
   f_name.value=e.name; f_cat.value=e.cat; f_date.value=e.date||"";
   f_project.value=e.project||""; f_status.value=e.status; f_note.value=e.note||"";
   setChecked("org", splitList(e.org));
-  setChecked("owner", splitList(e.owner));
+  refreshOwnerChecks(splitList(e.owner));
   document.getElementById("saveBtn").textContent="✔ 更新する";
   document.getElementById("cancelBtn").style.display="inline-block";
   document.getElementById("editHint").textContent="編集中：「"+e.name+"」";
@@ -356,12 +444,68 @@ async function toggleStatus(eid){
 function resetForm(){
   editId=null;
   ["f_name","f_date","f_project","f_note"].forEach(i=>document.getElementById(i).value="");
-  setChecked("org", []); setChecked("owner", []);
+  setChecked("org", []);
+  refreshOwnerChecks();
   document.getElementById("f_cat").selectedIndex=0;
   document.getElementById("f_status").value="plan";
   document.getElementById("saveBtn").textContent="＋ 追加する";
   document.getElementById("cancelBtn").style.display="none";
   document.getElementById("editHint").textContent="";
+}
+
+/* ===== 名簿管理パネル ===== */
+function toggleAdmin(){
+  const p = document.getElementById("adminPanel");
+  const show = p.style.display==="none";
+  p.style.display = show ? "block" : "none";
+  if(show) renderAdmin();
+}
+function renderAdmin(){
+  document.getElementById("admDepts").innerHTML = depts.length
+    ? depts.map(d=>`<span class="adm-chip">${esc(d)}<button title="削除" onclick="delDept('${esc(d)}')">✕</button></span>`).join("")
+    : `<span class="muted">部署がありません</span>`;
+  const sel = document.getElementById("admDeptSel");
+  const cur = sel.value;
+  sel.innerHTML = depts.map(d=>`<option value="${esc(d)}">${esc(d)}</option>`).join("");
+  if(depts.includes(cur)) sel.value=cur;
+  sel.onchange = renderAdminMembers;
+  renderAdminMembers();
+}
+function renderAdminMembers(){
+  const d = document.getElementById("admDeptSel").value;
+  const list = members.filter(m=>m.dept===d);
+  document.getElementById("admMembers").innerHTML = list.length
+    ? list.map(m=>`<span class="adm-chip">${esc(m.name)}<button title="削除" onclick="delMember('${esc(m.dept)}','${esc(m.name)}')">✕</button></span>`).join("")
+    : `<span class="muted">この部署の担当者はまだいません</span>`;
+}
+async function addDept(){
+  const v = document.getElementById("admNewDept").value.trim(); if(!v) return;
+  await masterMutate({action:"addDept", name:v});
+  document.getElementById("admNewDept").value="";
+  afterMasterChange();
+}
+async function delDept(name){
+  if(!confirm(`部署「${name}」を削除しますか？（所属担当者も削除されます）`)) return;
+  await masterMutate({action:"delDept", name});
+  afterMasterChange();
+}
+async function addMember(){
+  const dept = document.getElementById("admDeptSel").value;
+  const name = document.getElementById("admNewMember").value.trim();
+  if(!dept){ alert("先に部署を追加してください"); return; }
+  if(!name) return;
+  await masterMutate({action:"addMember", dept, name});
+  document.getElementById("admNewMember").value="";
+  afterMasterChange();
+}
+async function delMember(dept, name){
+  await masterMutate({action:"delMember", dept, name});
+  afterMasterChange();
+}
+function afterMasterChange(){
+  buildDeptChecks();
+  refreshOwnerChecks();
+  renderAdmin();
 }
 
 /* ===== 描画 ===== */
@@ -374,7 +518,6 @@ function render(){
   if(fCat) list = list.filter(e=>e.cat===fCat);
   if(fSt)  list = list.filter(e=>e.status===fSt);
 
-  // 集計
   document.getElementById("s_total").textContent=list.length;
   document.getElementById("s_fixed").textContent=list.filter(e=>e.status==="fixed").length;
   document.getElementById("s_plan").textContent =list.filter(e=>e.status==="plan").length;
@@ -383,10 +526,8 @@ function render(){
 
   const box = document.getElementById("list");
 
-  // カレンダー表示
   if(viewMode==="cal"){ box.innerHTML = `<div class="card" style="padding:16px 18px">${calHTML(list, fy)}</div>`; return; }
 
-  // 一覧（月ごと）
   if(list.length===0){ box.innerHTML=`<div class="card empty">この年度・条件の行事はありません。上のフォームから登録してください。</div>`; return; }
 
   let html="";
@@ -398,7 +539,7 @@ function render(){
       <div class="month-h"><span class="n">${m}月</span><span class="cnt">${rows.length}件</span></div>
       <table><thead><tr>
         <th style="width:80px">日付</th><th>行事名</th><th style="width:110px">カテゴリー</th>
-        <th class="hide-m">案件</th><th class="hide-m">部署</th><th style="width:80px">担当</th>
+        <th class="hide-m">案件</th><th class="hide-m">部署</th><th style="width:110px">担当</th>
         <th style="width:70px">状態</th><th class="hide-m">備考</th><th style="width:120px">操作</th>
       </tr></thead><tbody>`;
     for(const e of rows){
@@ -425,7 +566,7 @@ function render(){
   box.innerHTML = html;
 }
 
-function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* ===== カレンダー表示 ===== */
 function setView(v){
@@ -474,9 +615,14 @@ function calHTML(list, fy){
 }
 
 /* ===== 初期化 ===== */
-fillCatSelects(); resetForm();
+fillCatSelects();
 document.getElementById("list").innerHTML = `<div class="card empty">読み込み中…</div>`;
-loadData().then(()=>{ fillFY(); render(); });
+loadData().then(()=>{
+  buildDeptChecks();
+  resetForm();
+  fillFY();
+  render();
+});
 </script>
 </body>
 </html>
