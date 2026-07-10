@@ -173,6 +173,8 @@
   .gc-pop-h{font-size:10.5px;color:var(--sub);margin-bottom:5px}
   .gc-pn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink);padding:2px 0;white-space:nowrap}
   .gc-av{width:20px;height:20px;border-radius:50%;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:600}
+  .gc-pop{max-width:280px}
+  .gc-pop-body{font-size:11.5px;color:var(--ink);line-height:1.5;white-space:normal;word-break:break-word}
   .gc-track{position:relative;height:26px;border:1px solid var(--line);border-radius:7px;background:#fbfcfe;overflow:hidden}
   .gc-lines{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);pointer-events:none}
   .gc-lines span{border-left:1px solid #eef1f6}
@@ -933,9 +935,13 @@ function ganttYearHTML(list, fy){
     const prepDays = e.prep ? Math.round((ev - new Date(e.prep)) / 86400000) : 0;
     const ownerArr = splitList(e.owner);
     const ownerShort = ownerArr.length<=1 ? (ownerArr[0] || "—") : `${ownerArr[0]} +${ownerArr.length-1}名`;
-    const ownerPop = ownerArr.length
-      ? `<div class="gc-pop"><div class="gc-pop-h">担当者 ${ownerArr.length}名</div>${ownerArr.map(n=>`<div class="gc-pn"><span class="gc-av" style="background:${avColor(n)}">${esc(n.slice(0,1))}</span>${esc(n)}</div>`).join("")}</div>`
+    const ownerSec = ownerArr.length
+      ? `<div class="gc-pop-h">担当者 ${ownerArr.length}名</div>${ownerArr.map(n=>`<div class="gc-pn"><span class="gc-av" style="background:${avColor(n)}">${esc(n.slice(0,1))}</span>${esc(n)}</div>`).join("")}`
       : "";
+    const noteSec = e.note
+      ? `<div class="gc-pop-h" ${ownerArr.length?'style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px"':''}>備考</div><div class="gc-pop-body">${e.note}</div>`
+      : "";
+    const ownerPop = (ownerArr.length || e.note) ? `<div class="gc-pop">${ownerSec}${noteSec}</div>` : "";
     const md = `${ev.getMonth()+1}/${ev.getDate()}`;
     return `<div class="gc-row" onclick="openDetail('${e.id}')">
       <div class="gc-name"><span class="gc-dot" style="background:${c.color}"></span>${esc(e.name)}</div>
