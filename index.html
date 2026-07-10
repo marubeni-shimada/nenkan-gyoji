@@ -172,12 +172,21 @@
   .gc-lines span:first-child{border-left:none}
   .gc-axis{border:none;background:none;height:auto;display:grid;grid-template-columns:repeat(12,1fr)}
   .gc-mcol{font-size:10px;color:var(--sub);text-align:center}
-  .gc-bar{position:absolute;top:50%;transform:translateY(-50%);height:17px;min-width:14px;border-radius:20px;color:#fff;
-          font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:flex-end;padding:0 7px;white-space:nowrap;
-          box-shadow:0 1px 3px rgba(0,0,0,.2);transition:filter .1s ease}
-  .gc-row:hover .gc-bar{filter:brightness(1.06)}
-  .gc-cap{flex:none}
+  .gc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:0}
+  .gc-lines span:nth-child(even){background:#f6f8fc}
+  .gc-today{position:absolute;top:0;bottom:0;width:2px;background:#ef4444;opacity:.55;z-index:2;pointer-events:none}
+  .gc-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;min-width:14px;border-radius:20px;color:#fff;
+          font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:0 8px;white-space:nowrap;
+          box-shadow:0 1px 3px rgba(0,0,0,.2);transition:filter .1s ease, transform .1s ease;z-index:3}
+  .gc-row:hover .gc-bar{filter:brightness(1.07);transform:translateY(-50%) scale(1.01)}
+  .gc-prep{overflow:hidden;text-overflow:ellipsis;opacity:.95}
+  .gc-cap{flex:none;background:rgba(255,255,255,.25);border-radius:12px;padding:0 6px}
   @media(max-width:820px){.gc-row{grid-template-columns:110px 70px 1fr}}
+  /* 準備開始日のワンタッチ入力 */
+  .prep-quick{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .pq{font-size:11px;padding:3px 10px;border:1px solid var(--line);background:#fff;border-radius:20px;cursor:pointer;color:var(--sub);transition:.12s}
+  .pq:hover{background:#f1f5f9;color:var(--ink)}
+  .st-prep{font-size:11px;color:var(--sub);margin-top:5px;display:flex;align-items:center;gap:4px}
 
   /* アニメーション */
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -286,6 +295,12 @@
         <div>
           <label>準備開始日（任意）</label>
           <input id="f_prep" type="date" style="width:100%">
+          <div class="prep-quick">
+            <button type="button" class="pq" onclick="setPrep(7)">1週間前</button>
+            <button type="button" class="pq" onclick="setPrep(14)">2週間前</button>
+            <button type="button" class="pq" onclick="setPrep(30)">1ヶ月前</button>
+            <button type="button" class="pq" onclick="document.getElementById('f_prep').value=''">クリア</button>
+          </div>
         </div>
         <div class="fg2">
           <label>部署（複数選択可）</label>
@@ -580,6 +595,15 @@ function fillFY(){
 /* ===== モーダル ===== */
 function showModal(id){ document.getElementById(id).classList.add("on"); }
 function closeModal(id){ document.getElementById(id).classList.remove("on"); }
+/* 準備開始日：開催日から◯日前を自動入力 */
+function setPrep(days){
+  const d = document.getElementById("f_date").value;
+  if(!d){ alert("先に開催日を入力してください"); return; }
+  const dt = new Date(d); dt.setDate(dt.getDate()-days);
+  const y=dt.getFullYear(), m=String(dt.getMonth()+1).padStart(2,"0"), da=String(dt.getDate()).padStart(2,"0");
+  document.getElementById("f_prep").value = `${y}-${m}-${da}`;
+}
+
 /* 備考リッチテキスト：装飾コマンド／簡易サニタイズ */
 function rteCmd(cmd, val){ document.getElementById("f_note").focus(); document.execCommand(cmd, false, val||null); }
 function noteClean(html){
@@ -605,8 +629,11 @@ function openDetail(eid){
   const dstr = dt ? `${e.date.replace(/-/g,'/')}（${WD[dt.getDay()]}）` : "—";
   const stTxt = e.status==="fixed"?"確定":"予定";
   const stCls = e.status==="fixed"?"b-fixed":"b-plan";
+  const prepDays = e.prep ? Math.round((new Date(e.date) - new Date(e.prep)) / 86400000) : 0;
+  const prepStr = (e.prep && prepDays>0) ? `${e.prep.replace(/-/g,"/")} から（${prepDays}日前）` : "—";
   document.getElementById("dt_body").innerHTML = `
     <div class="dt-row"><span class="dt-l">日付</span><span>${dstr}</span></div>
+    <div class="dt-row"><span class="dt-l">準備開始</span><span>🚩 ${prepStr}</span></div>
     <div class="dt-row"><span class="dt-l">カテゴリー</span><span class="cat" style="background:${catColor(e.cat)}">${esc(e.cat)}</span></div>
     <div class="dt-row"><span class="dt-l">部署</span><span>${esc(e.org)||'—'}</span></div>
     <div class="dt-row"><span class="dt-l">担当者</span><span>${esc(e.owner)||'—'}</span></div>
@@ -775,11 +802,14 @@ function render(){
       const stCls = e.status==="fixed"?"b-fixed":"b-plan";
       const stTxt = e.status==="fixed"?"確定":"予定";
       const noteHTML = e.note ? `<div class="st-note" style="border-color:${c.dark}33">${e.note}</div>` : "";
+      const prepDays = e.prep ? Math.round((new Date(e.date) - new Date(e.prep)) / 86400000) : 0;
+      const prepHTML = (e.prep && prepDays>0) ? `<div class="st-prep" style="color:${c.dark}">🚩 準備 ${prepDays}日前（${e.prep.slice(5).replace("-","/")}〜）</div>` : "";
       html += `<div class="st-card" style="background:${c.tint};color:${c.dark}">
         <span class="st-pin" style="background:${c.color}"></span>
         <div><span class="st-chip" style="background:${c.color}">${dd} ${wd} ・ ${esc(e.cat)}</span></div>
         <div class="st-name" style="color:${c.dark}">${esc(e.name)}</div>
         <div class="st-meta">${e.org?esc(e.org)+" ・ ":""}担当：${owners?esc(owners):"—"}</div>
+        ${prepHTML}
         ${noteHTML}
         <div class="st-foot">
           <span class="badge ${stCls}" style="cursor:pointer" title="クリックで切替" onclick="toggleStatus('${e.id}')">${stTxt}</span>
@@ -874,6 +904,11 @@ function ganttYearHTML(list, fy){
   const lines = MONTH_ORDER.map(()=>`<span></span>`).join("");
   const clamp = (v)=>Math.max(0, Math.min(100, v));
 
+  // 今日ライン（表示中の年度が今日を含むときだけ）
+  const tOff = (new Date() - start) / 86400000;
+  const todayLine = (tOff>=0 && tOff<=total)
+    ? `<div class="gc-today" style="left:${clamp(tOff/total*100)}%"></div>` : "";
+
   const rowsH = rows.map(e=>{
     const c = catObj(e.cat);
     const ev = new Date(e.date);
@@ -886,15 +921,18 @@ function ganttYearHTML(list, fy){
     const left = clamp(prOff / total * 100);
     const right = clamp(evOff / total * 100);
     let width = right - left; if(width < 1.4) width = 1.4;
+    const prepDays = e.prep ? Math.round((ev - new Date(e.prep)) / 86400000) : 0;
     const owner = splitList(e.owner).join("、") || "—";
     const md = `${ev.getMonth()+1}/${ev.getDate()}`;
     return `<div class="gc-row" onclick="openDetail('${e.id}')">
-      <div class="gc-name">${esc(e.name)}</div>
+      <div class="gc-name"><span class="gc-dot" style="background:${c.color}"></span>${esc(e.name)}</div>
       <div class="gc-owner">${esc(owner)}</div>
       <div class="gc-track">
         <div class="gc-lines">${lines}</div>
-        <div class="gc-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${esc(e.name)}（開催 ${md}）">
-          <span class="gc-cap">${overflow?"◀ ":""}${md}</span>
+        ${todayLine}
+        <div class="gc-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${esc(e.name)}（開催 ${md}${prepDays>0?" / 準備"+prepDays+"日":""}）">
+          <span class="gc-prep">${overflow?"◀":""}${prepDays>0?"準備"+prepDays+"日":""}</span>
+          <span class="gc-cap">🚩${md}</span>
         </div>
       </div>
     </div>`;
