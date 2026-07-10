@@ -165,7 +165,14 @@
   .gc-row{display:grid;grid-template-columns:150px 96px 1fr;gap:10px;align-items:center;cursor:pointer}
   .gc-head{cursor:default}
   .gc-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .gc-owner{font-size:11.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gc-owner{position:relative;font-size:11.5px;color:var(--sub)}
+  .gc-short{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gc-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:20;background:#fff;border:1px solid var(--line);border-radius:10px;
+          box-shadow:0 10px 26px rgba(0,0,0,.18);padding:8px 10px;min-width:150px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:.14s}
+  .gc-owner:hover .gc-pop{opacity:1;visibility:visible;transform:translateY(0)}
+  .gc-pop-h{font-size:10.5px;color:var(--sub);margin-bottom:5px}
+  .gc-pn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink);padding:2px 0;white-space:nowrap}
+  .gc-av{width:20px;height:20px;border-radius:50%;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:600}
   .gc-track{position:relative;height:26px;border:1px solid var(--line);border-radius:7px;background:#fbfcfe;overflow:hidden}
   .gc-lines{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);pointer-events:none}
   .gc-lines span{border-left:1px solid #eef1f6}
@@ -392,6 +399,8 @@ const CATS = [
   {name:"その他",           color:"var(--c6)", tint:"#F1F5F9", dark:"#475569"},
 ];
 function catObj(name){ return CATS.find(x=>x.name===name) || {color:"var(--c6)",tint:"#F1F5F9",dark:"#475569"}; }
+const AV_PAL = ["#3b82f6","#10b981","#8b5cf6","#f59e0b","#ef4444","#0ea5e9","#ec4899","#14b8a6","#6366f1"];
+function avColor(s){ let h=0; for(let i=0;i<(s||"").length;i++) h=(h*31+s.charCodeAt(i))>>>0; return AV_PAL[h%AV_PAL.length]; }
 const MONTH_THEME = {
   7:{e:"☀️",bg:"#E1F5EE",ink:"#0F6E56"}, 8:{e:"☀️",bg:"#E6F1FB",ink:"#185FA5"},
   9:{e:"🍂",bg:"#FAEEDA",ink:"#854F0B"}, 10:{e:"🍂",bg:"#FAECE7",ink:"#993C1D"},
@@ -922,11 +931,15 @@ function ganttYearHTML(list, fy){
     const right = clamp(evOff / total * 100);
     let width = right - left; if(width < 1.4) width = 1.4;
     const prepDays = e.prep ? Math.round((ev - new Date(e.prep)) / 86400000) : 0;
-    const owner = splitList(e.owner).join("、") || "—";
+    const ownerArr = splitList(e.owner);
+    const ownerShort = ownerArr.length<=1 ? (ownerArr[0] || "—") : `${ownerArr[0]} +${ownerArr.length-1}名`;
+    const ownerPop = ownerArr.length
+      ? `<div class="gc-pop"><div class="gc-pop-h">担当者 ${ownerArr.length}名</div>${ownerArr.map(n=>`<div class="gc-pn"><span class="gc-av" style="background:${avColor(n)}">${esc(n.slice(0,1))}</span>${esc(n)}</div>`).join("")}</div>`
+      : "";
     const md = `${ev.getMonth()+1}/${ev.getDate()}`;
     return `<div class="gc-row" onclick="openDetail('${e.id}')">
       <div class="gc-name"><span class="gc-dot" style="background:${c.color}"></span>${esc(e.name)}</div>
-      <div class="gc-owner">${esc(owner)}</div>
+      <div class="gc-owner"><span class="gc-short">${esc(ownerShort)}</span>${ownerPop}</div>
       <div class="gc-track">
         <div class="gc-lines">${lines}</div>
         ${todayLine}
