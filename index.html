@@ -34,20 +34,20 @@
   .btn-del:hover{background:#fee2e2}
 
   /* レイアウト */
-  .app{max-width:1200px;margin:0 auto;padding:22px;display:grid;grid-template-columns:220px 1fr;gap:22px;align-items:start}
-  .side{position:sticky;top:22px;display:flex;flex-direction:column;gap:18px}
-  .brand .b1{font-size:16px;font-weight:800;letter-spacing:.02em}
-  .brand .b2{font-size:11.5px;color:var(--sub);margin-top:2px}
-  .side-block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
-  .nav{display:flex;flex-direction:column;gap:2px}
-  .nav a{padding:9px 11px;border-radius:9px;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:600}
+  .app{max-width:1240px;margin:0 auto;padding:18px;display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:start}
+  .side{position:sticky;top:18px;display:flex;flex-direction:column;gap:11px}
+  .brand .b1{font-size:14px;font-weight:800;letter-spacing:.01em}
+  .brand .b2{font-size:10.5px;color:var(--sub);margin-top:1px}
+  .side-block{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px}
+  .nav{display:flex;flex-direction:column;gap:1px}
+  .nav a{padding:7px 9px;border-radius:8px;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600}
   .nav a:hover{background:#f1f5f9}
   .nav a.active{background:var(--brand-l);color:var(--brand-d)}
   .nav .ic{width:18px;text-align:center}
-  .side-t{font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.04em;margin:0 0 8px 2px}
-  .legend{display:flex;flex-direction:column;gap:7px}
-  .legend span{font-size:12px;display:inline-flex;align-items:center;gap:8px;color:var(--sub)}
-  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+  .side-t{font-size:10.5px;color:var(--sub);font-weight:700;letter-spacing:.03em;margin:0 0 6px 2px}
+  .legend{display:flex;flex-direction:column;gap:5px}
+  .legend span{font-size:11.5px;display:inline-flex;align-items:center;gap:7px;color:var(--sub);line-height:1.3}
+  .dot{width:9px;height:9px;border-radius:3px;display:inline-block;flex:none}
 
   /* メイン */
   .main-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
@@ -803,11 +803,11 @@ function render(){
       const stTxt = e.status==="fixed"?"確定":"予定";
       const noteHTML = e.note ? `<div class="st-note" style="border-color:${c.dark}33">${e.note}</div>` : "";
       const prepDays = e.prep ? Math.round((new Date(e.date) - new Date(e.prep)) / 86400000) : 0;
-      const prepHTML = (e.prep && prepDays>0) ? `<div class="st-prep" style="color:${c.dark}">🚩 準備 ${prepDays}日前（${e.prep.slice(5).replace("-","/")}〜）</div>` : "";
-      html += `<div class="st-card" style="background:${c.tint};color:${c.dark}">
+      const prepHTML = (e.prep && prepDays>0) ? `<div class="st-prep">🚩 準備 ${prepDays}日前（${e.prep.slice(5).replace("-","/")}〜）</div>` : "";
+      html += `<div class="st-card" style="background:${c.tint};color:#1f2937">
         <span class="st-pin" style="background:${c.color}"></span>
         <div><span class="st-chip" style="background:${c.color}">${dd} ${wd} ・ ${esc(e.cat)}</span></div>
-        <div class="st-name" style="color:${c.dark}">${esc(e.name)}</div>
+        <div class="st-name">${esc(e.name)}</div>
         <div class="st-meta">${e.org?esc(e.org)+" ・ ":""}担当：${owners?esc(owners):"—"}</div>
         ${prepHTML}
         ${noteHTML}
