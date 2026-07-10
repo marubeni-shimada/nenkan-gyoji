@@ -159,19 +159,25 @@
   .cal-ev{font-size:11px;color:#fff;border-radius:5px;padding:2px 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cal-ev.plan{opacity:.65}
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-  /* ガント（準備期間） */
+  /* ガント（年度：準備期間） */
   .gantt-title{font-size:14px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:6px}
-  .gantt{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-  .g-row{display:grid;grid-template-columns:140px 1fr;gap:10px;align-items:center}
-  .g-label{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .g-label small{display:block;color:var(--sub);font-weight:400;font-size:10.5px}
-  .g-track{display:grid;height:24px;border:1px solid var(--line);border-radius:7px;background:#fbfcfe;overflow:hidden}
-  .g-head .g-track{border:none;background:none;height:auto}
-  .g-daynum{font-size:9px;color:var(--sub);text-align:center;line-height:1}
-  .g-bar{grid-row:1;align-self:center;height:18px;margin:0 2px;border-radius:20px;color:#fff;font-size:10px;font-weight:600;
-         display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 8px;white-space:nowrap;overflow:hidden;
-         box-shadow:0 1px 3px rgba(0,0,0,.15)}
-  .g-cap{background:rgba(255,255,255,.28);border-radius:12px;padding:0 6px;flex:none}
+  .gc{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .gc-row{display:grid;grid-template-columns:150px 96px 1fr;gap:10px;align-items:center;cursor:pointer}
+  .gc-head{cursor:default}
+  .gc-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gc-owner{font-size:11.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gc-track{position:relative;height:26px;border:1px solid var(--line);border-radius:7px;background:#fbfcfe;overflow:hidden}
+  .gc-lines{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);pointer-events:none}
+  .gc-lines span{border-left:1px solid #eef1f6}
+  .gc-lines span:first-child{border-left:none}
+  .gc-axis{border:none;background:none;height:auto;display:grid;grid-template-columns:repeat(12,1fr)}
+  .gc-mcol{font-size:10px;color:var(--sub);text-align:center}
+  .gc-bar{position:absolute;top:50%;transform:translateY(-50%);height:17px;min-width:14px;border-radius:20px;color:#fff;
+          font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:flex-end;padding:0 7px;white-space:nowrap;
+          box-shadow:0 1px 3px rgba(0,0,0,.2);transition:filter .1s ease}
+  .gc-row:hover .gc-bar{filter:brightness(1.06)}
+  .gc-cap{flex:none}
+  @media(max-width:820px){.gc-row{grid-template-columns:110px 70px 1fr}}
 
   /* アニメーション */
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -230,6 +236,7 @@
         <a id="navList" class="active" onclick="setView('list')"><span class="ic">📋</span>一覧</a>
         <a id="navYear" onclick="setView('year')"><span class="ic">▦</span>全体</a>
         <a id="navCal" onclick="setView('cal')"><span class="ic">📅</span>カレンダー</a>
+        <a id="navGantt" onclick="setView('gantt')"><span class="ic">📊</span>ガント</a>
         <a onclick="toggleAdmin()"><span class="ic">👥</span>名簿管理</a>
       </div>
     </div>
@@ -741,13 +748,13 @@ function render(){
   const box = document.getElementById("list");
 
   if(viewMode==="year"){ box.innerHTML = yearHTML(list, fy); return; }
-  if(viewMode==="cal"){
-    box.innerHTML = `<div class="cal-wrap">${calHTML(list, fy)}</div>`
-      + `<div class="cal-wrap" style="margin-top:16px">
-           <div class="gantt-title">🛠 準備スケジュール（${MONTH_ORDER[calIdx]}月）</div>
-           <div class="muted" style="font-size:11.5px;margin-bottom:6px">バーの長さ＝開催までに必要な準備期間。右端が開催日です。</div>
-           ${ganttHTML(list, fy)}
-         </div>`;
+  if(viewMode==="cal"){ box.innerHTML = `<div class="cal-wrap">${calHTML(list, fy)}</div>`; return; }
+  if(viewMode==="gantt"){
+    box.innerHTML = `<div class="cal-wrap">
+      <div class="gantt-title">🛠 準備ガント（${fy}年度 7月〜翌6月）</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:10px">バーの長さ＝開催までに必要な準備期間。右端が開催日です。</div>
+      ${ganttYearHTML(list, fy)}
+    </div>`;
     return;
   }
 
@@ -795,6 +802,7 @@ function setView(v){
   document.getElementById("navList").classList.toggle("active", v==="list");
   document.getElementById("navYear").classList.toggle("active", v==="year");
   document.getElementById("navCal").classList.toggle("active", v==="cal");
+  document.getElementById("navGantt").classList.toggle("active", v==="gantt");
   render();
 }
 function calNav(dir){ calIdx = Math.min(11, Math.max(0, (calIdx==null?0:calIdx)+dir)); render(); }
@@ -854,43 +862,50 @@ function calHTML(list, fy){
     <div class="cal-grid" style="margin-top:6px">${cells}</div>`;
 }
 
-/* ガント：表示中の月の「準備開始日 → 開催日」を横棒で表示 */
-function ganttHTML(list, fy){
-  const m = MONTH_ORDER[calIdx];
-  const y = calIdx<6 ? fy : fy+1;
-  const days = new Date(y, m, 0).getDate();
-  const monthStart = new Date(y, m-1, 1);
-  const rows = list.filter(e=>e.date && new Date(e.date).getFullYear()===y && (new Date(e.date).getMonth()+1)===m)
-                   .sort((a,b)=>a.date.localeCompare(b.date));
-  if(rows.length===0) return `<div class="muted" style="font-size:12px">この月に開催の行事はありません。</div>`;
+/* ガント：年度（7月〜翌6月）を通した「準備開始日 → 開催日」の横棒 */
+function ganttYearHTML(list, fy){
+  const start = new Date(fy, 6, 1);        // 7/1
+  const end   = new Date(fy+1, 6, 1);      // 翌7/1
+  const total = (end - start) / 86400000;  // 年度の日数
+  const rows = (list||[]).filter(e=>e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  if(rows.length===0) return `<div class="muted" style="font-size:12px">この年度の行事はありません。</div>`;
 
-  let axis = "";
-  for(let d=1; d<=days; d++) axis += `<div class="g-daynum">${(d===1||d%5===0||d===days)?d:""}</div>`;
+  const axis  = MONTH_ORDER.map(m=>`<div class="gc-mcol">${m}月</div>`).join("");
+  const lines = MONTH_ORDER.map(()=>`<span></span>`).join("");
+  const clamp = (v)=>Math.max(0, Math.min(100, v));
 
-  let rowsH = "";
-  for(const e of rows){
+  const rowsH = rows.map(e=>{
     const c = catObj(e.cat);
-    const evDay = new Date(e.date).getDate();
-    let startDay = evDay, overflow = false;
+    const ev = new Date(e.date);
+    const evOff = (ev - start) / 86400000;
+    let prOff = evOff, overflow = false;
     if(e.prep){
-      const p = new Date(e.prep);
-      if(p < monthStart){ startDay = 1; overflow = true; }
-      else if(p.getFullYear()===y && p.getMonth()+1===m){ startDay = Math.min(p.getDate(), evDay); }
+      const po = (new Date(e.prep) - start) / 86400000;
+      if(po < evOff){ prOff = po; if(po < 0){ prOff = 0; overflow = true; } }
     }
-    const prepDays = Math.max(0, evDay - startDay) + (overflow?0:0);
-    const label = (overflow?"◀ ":"") + (e.prep && (prepDays>0||overflow) ? `準備${overflow?"":prepDays+"日"}` : "");
-    rowsH += `<div class="g-row">
-      <div class="g-label">${esc(e.name)}<small>${esc(splitList(e.owner).join("、"))||"担当未定"}</small></div>
-      <div class="g-track" style="grid-template-columns:repeat(${days},1fr)">
-        <div class="g-bar" style="grid-column:${startDay} / ${evDay+1};background:${c.color}">
-          <span style="overflow:hidden;text-overflow:ellipsis">${label}</span>
-          <span class="g-cap">${evDay}日</span>
+    const left = clamp(prOff / total * 100);
+    const right = clamp(evOff / total * 100);
+    let width = right - left; if(width < 1.4) width = 1.4;
+    const owner = splitList(e.owner).join("、") || "—";
+    const md = `${ev.getMonth()+1}/${ev.getDate()}`;
+    return `<div class="gc-row" onclick="openDetail('${e.id}')">
+      <div class="gc-name">${esc(e.name)}</div>
+      <div class="gc-owner">${esc(owner)}</div>
+      <div class="gc-track">
+        <div class="gc-lines">${lines}</div>
+        <div class="gc-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${esc(e.name)}（開催 ${md}）">
+          <span class="gc-cap">${overflow?"◀ ":""}${md}</span>
         </div>
       </div>
     </div>`;
-  }
-  return `<div class="gantt">
-    <div class="g-row g-head"><div class="g-label" style="color:var(--sub);font-weight:600">準備 → 開催</div><div class="g-track" style="grid-template-columns:repeat(${days},1fr)">${axis}</div></div>
+  }).join("");
+
+  return `<div class="gc">
+    <div class="gc-row gc-head">
+      <div class="gc-name" style="color:var(--sub);font-weight:600">イベント名</div>
+      <div class="gc-owner" style="color:var(--sub);font-weight:600">担当者</div>
+      <div class="gc-track gc-axis">${axis}</div>
+    </div>
     ${rowsH}
   </div>`;
 }
