@@ -249,6 +249,7 @@
       <div class="b2">活動表 ｜ 7月〜翌6月</div>
     </div>
     <button class="btn btn-p" onclick="openForm()" style="display:flex;align-items:center;justify-content:center;gap:6px">＋ 行事を追加</button>
+    <button class="btn btn-g" onclick="openRecur()" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px">🔁 毎週の予定</button>
     <div class="side-block">
       <div class="nav">
         <a id="navList" class="active" onclick="setView('list')"><span class="ic">📋</span>一覧</a>
@@ -267,7 +268,7 @@
   <!-- メイン -->
   <main class="main">
     <div class="main-head">
-      <h1>行事スケジュール</h1>
+      <h1>イベントスケジュール</h1>
       <div class="filters">
         <select id="fyFilter" onchange="render()"></select>
         <select id="catFilter" onchange="render()"><option value="">カテゴリー：すべて</option></select>
@@ -342,6 +343,62 @@
     <div class="modal-foot">
       <button class="btn btn-g" onclick="closeModal('formModal')">キャンセル</button>
       <button class="btn btn-p" id="saveBtn" onclick="save()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- 毎週の予定（モーダル） -->
+<div class="modal" id="recurModal">
+  <div class="modal-card">
+    <div class="modal-head"><h2>🔁 毎週の予定を登録</h2><button class="modal-x" onclick="closeModal('recurModal')" aria-label="閉じる">✕</button></div>
+    <div class="modal-body">
+      <p class="muted" style="margin:0 0 10px">曜日と期間を指定すると、その曜日で毎週分をまとめて登録します。<b>カレンダーと全体</b>に表示され、後から1回ずつ削除できます。</p>
+      <div class="fgrid">
+        <div class="fg2">
+          <label>行事名 <span style="color:#ef4444">*</span></label>
+          <input id="r_name" type="text" placeholder="例）定例ミーティング" style="width:100%">
+        </div>
+        <div>
+          <label>カテゴリー</label>
+          <select id="r_cat" style="width:100%"></select>
+        </div>
+        <div>
+          <label>曜日</label>
+          <select id="r_wd" style="width:100%">
+            <option value="1">毎週 月曜</option><option value="2">毎週 火曜</option>
+            <option value="3" selected>毎週 水曜</option><option value="4">毎週 木曜</option>
+            <option value="5">毎週 金曜</option><option value="6">毎週 土曜</option><option value="0">毎週 日曜</option>
+          </select>
+        </div>
+        <div>
+          <label>開始日</label>
+          <input id="r_start" type="date" style="width:100%">
+        </div>
+        <div>
+          <label>終了日</label>
+          <input id="r_end" type="date" style="width:100%">
+        </div>
+        <div class="fg2">
+          <label>部署（複数選択可）</label>
+          <div id="r_org" class="checks"></div>
+        </div>
+        <div class="fg2">
+          <label>担当者（複数選択可 / 選んだ部署の人が表示）</label>
+          <div id="r_owner" class="checks"></div>
+        </div>
+        <div>
+          <label>ステータス</label>
+          <select id="r_status" style="width:100%"><option value="plan">予定</option><option value="fixed">確定</option></select>
+        </div>
+        <div class="fg2">
+          <label>備考</label>
+          <textarea id="r_note" rows="2" placeholder="補足など" style="width:100%;resize:vertical"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-g" onclick="closeModal('recurModal')">キャンセル</button>
+      <button class="btn btn-p" id="recurSaveBtn" onclick="saveRecur()">まとめて登録</button>
     </div>
   </div>
 </div>
@@ -559,13 +616,13 @@ function fillChecks(containerId, name, items){
 function getChecked(name){ return [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(el=>el.value); }
 function setChecked(name, arr){ document.querySelectorAll(`input[name="${name}"]`).forEach(el=>{ el.checked = arr.includes(el.value); }); }
 function splitList(v){ return (v||"").split(/[,、]/).map(s=>s.trim()).filter(Boolean); }
-function currentOwnerList(){
-  const cd = getChecked("org");
+function ownerListFor(cd){
   if(!cd.length) return ["全体"];                          // 部署未選択：全体のみ
   const groups = cd.map(d=>d+"全体");                      // ◯◯部全体（全体は非表示）
   const names = members.filter(m=>cd.includes(m.dept)).map(m=>m.name);
   return [...new Set([...groups, ...names])];
 }
+function currentOwnerList(){ return ownerListFor(getChecked("org")); }
 function buildDeptChecks(){
   const prev = getChecked("org");
   fillChecks("f_org", "org", depts);
@@ -586,6 +643,7 @@ function refreshOwnerChecks(ensure){
 function fillCatSelects(){
   const opt = CATS.map(c=>`<option value="${c.name}">${c.name}</option>`).join("");
   document.getElementById("f_cat").innerHTML = opt;
+  document.getElementById("r_cat").innerHTML = opt;
   document.getElementById("catFilter").innerHTML = `<option value="">カテゴリー：すべて</option>`+opt;
   document.getElementById("legend").innerHTML =
     CATS.map(c=>`<span><i class="dot" style="background:${c.color}"></i>${c.name}</span>`).join("");
@@ -628,6 +686,56 @@ function openForm(){
   document.getElementById("formTitle").textContent = "行事を追加";
   showModal("formModal");
   setTimeout(()=>document.getElementById("f_name").focus(), 50);
+}
+
+/* ===== 毎週の予定 ===== */
+function refreshROwner(){
+  const cd = getChecked("rorg");
+  const names = ownerListFor(cd);
+  const prev = getChecked("rowner");
+  fillChecks("r_owner", "rowner", names);
+  setChecked("rowner", prev.filter(n=>names.includes(n)));
+}
+function openRecur(){
+  const fy = parseInt(document.getElementById("fyFilter").value,10) ||
+             (new Date().getMonth()+1>=7?new Date().getFullYear():new Date().getFullYear()-1);
+  document.getElementById("r_name").value="";
+  document.getElementById("r_cat").selectedIndex=0;
+  document.getElementById("r_wd").value="3";
+  document.getElementById("r_start").value=`${fy}-07-01`;
+  document.getElementById("r_end").value=`${fy+1}-06-30`;
+  document.getElementById("r_status").value="plan";
+  document.getElementById("r_note").value="";
+  fillChecks("r_org","rorg",depts);
+  document.getElementById("r_org").onchange = refreshROwner;
+  setChecked("rorg",[]);
+  refreshROwner();
+  showModal("recurModal");
+}
+async function saveRecur(){
+  const name = document.getElementById("r_name").value.trim();
+  if(!name){ alert("行事名を入力してください"); return; }
+  const start = document.getElementById("r_start").value;
+  const end   = document.getElementById("r_end").value;
+  const wd    = parseInt(document.getElementById("r_wd").value,10);
+  if(!start || !end){ alert("開始日と終了日を入力してください"); return; }
+  let d = new Date(start); while(d.getDay()!==wd) d.setDate(d.getDate()+1);  // 最初の該当曜日
+  const endD = new Date(end);
+  const series = id();
+  const base = {
+    name, cat: document.getElementById("r_cat").value,
+    org: getChecked("rorg").join("、"), owner: getChecked("rowner").join("、"),
+    status: document.getElementById("r_status").value, note: (document.getElementById("r_note").value||"").trim(),
+  };
+  const evs = [];
+  while(d <= endD){ evs.push({ id:id(), ...base, date:ymdOf(d), prep:"", series }); d.setDate(d.getDate()+7); }
+  if(!evs.length){ alert("期間内に該当する曜日がありません"); return; }
+  const btn = document.getElementById("recurSaveBtn"); btn.disabled = true;
+  await bulkSave(evs);
+  btn.disabled = false;
+  closeModal("recurModal"); fillFY();
+  document.getElementById("fyFilter").value = fyOf(evs[0].date);
+  render();
 }
 
 /* 詳細表示 */
@@ -677,6 +785,21 @@ async function save(){
   resetForm(); fillFY();
   if(obj.date){ document.getElementById("fyFilter").value = fyOf(obj.date); }
   render();
+}
+function ymdOf(d){ const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),da=String(d.getDate()).padStart(2,"0"); return `${y}-${m}-${da}`; }
+async function bulkSave(evs){
+  if(USE_API){
+    setLoading(true, "保存中…");
+    try{
+      const r = await fetch(API, {method:"POST", body: JSON.stringify({action:"bulkSave", events:evs})});
+      const d = await r.json();
+      if(d && Array.isArray(d.events)) events = d.events.map(e=>({...e, date:toYMD(e.date), prep:toYMD(e.prep)}));
+    }catch(err){ alert("保存に失敗しました: "+err); }
+    finally{ setLoading(false); }
+  }else{
+    evs.forEach(ev=>events.push(ev));
+    localStorage.setItem(KEY, JSON.stringify(events));
+  }
 }
 
 function edit(eid){
@@ -800,7 +923,7 @@ function render(){
 
   let html="";
   for(const m of MONTH_ORDER){
-    const rows = list.filter(e=>e.date && (new Date(e.date).getMonth()+1)===m)
+    const rows = list.filter(e=>e.date && !e.series && (new Date(e.date).getMonth()+1)===m)
                      .sort((a,b)=>a.date.localeCompare(b.date));
     if(rows.length===0) continue;
     const th = MONTH_THEME[m] || {e:"",bg:"#eef2f7",ink:"#334155"};
@@ -908,7 +1031,7 @@ function ganttYearHTML(list, fy){
   const start = new Date(fy, 6, 1);        // 7/1
   const end   = new Date(fy+1, 6, 1);      // 翌7/1
   const total = (end - start) / 86400000;  // 年度の日数
-  const rows = (list||[]).filter(e=>e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const rows = (list||[]).filter(e=>e.date && !e.series).sort((a,b)=>a.date.localeCompare(b.date));
   if(rows.length===0) return `<div class="muted" style="font-size:12px">この年度の行事はありません。</div>`;
 
   const axis  = MONTH_ORDER.map(m=>`<div class="gc-mcol">${m}月</div>`).join("");
@@ -959,7 +1082,7 @@ function ganttYearHTML(list, fy){
 
   return `<div class="gc">
     <div class="gc-row gc-head">
-      <div class="gc-name" style="color:var(--sub);font-weight:600">イベント名</div>
+      <div class="gc-name" style="color:var(--sub);font-weight:600">行事名</div>
       <div class="gc-owner" style="color:var(--sub);font-weight:600">担当者</div>
       <div class="gc-track gc-axis">${axis}</div>
     </div>
