@@ -238,6 +238,22 @@
     .fgrid{grid-template-columns:1fr}.fg2{grid-column:span 1}
     .hide-m{display:none}
   }
+
+  /* 印刷 / PDF */
+  @media print {
+    @page { size: landscape; margin: 10mm; }
+    body { background:#fff; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .side, #loading, .modal, .btn-edit, .btn-del, .tools { display:none !important; }
+    .app{ display:block; padding:0; max-width:none; }
+    .main-head{ margin-bottom:10px; }
+    .main-head .filters{ gap:6px; }
+    .main-head select{ border:none; padding:2px 4px; font-weight:600; }
+    .st-grid > .st-card{ transform:none !important; box-shadow:none !important; page-break-inside:avoid; }
+    .st-card, .cal-wrap, .ev-row, .yr-cell, .gc{ box-shadow:none !important; }
+    .gc-row, .st-card, .yr-cell, .month, .st-month{ page-break-inside:avoid; }
+    .cal-ev, .st-pin{ box-shadow:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -254,11 +270,11 @@
     <button class="btn btn-g" onclick="openRecur()" style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px">🔁 毎週の予定</button>
     <div class="side-block">
       <div class="nav">
-        <a id="navList" class="active" onclick="setView('list')"><span class="ic">📋</span>一覧</a>
+        <a id="navCal" class="active" onclick="setView('cal')"><span class="ic">📅</span>カレンダー</a>
         <a id="navYear" onclick="setView('year')"><span class="ic">▦</span>全体</a>
-        <a id="navCal" onclick="setView('cal')"><span class="ic">📅</span>カレンダー</a>
         <a id="navGantt" onclick="setView('gantt')"><span class="ic">📊</span>ガント</a>
         <a onclick="toggleAdmin()"><span class="ic">👥</span>名簿管理</a>
+        <a onclick="window.print()"><span class="ic">🖨</span>印刷 / PDF</a>
       </div>
     </div>
     <div class="side-block">
@@ -490,7 +506,7 @@ let events = [];
 let depts  = [];
 let members = [];
 let editId = null;
-let viewMode = "list";
+let viewMode = "cal";
 let calIdx = null;
 
 /* ===== ローディング ===== */
@@ -991,7 +1007,6 @@ function esc(s){ return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;
 /* ===== カレンダー ===== */
 function setView(v){
   viewMode = v;
-  document.getElementById("navList").classList.toggle("active", v==="list");
   document.getElementById("navYear").classList.toggle("active", v==="year");
   document.getElementById("navCal").classList.toggle("active", v==="cal");
   document.getElementById("navGantt").classList.toggle("active", v==="gantt");
