@@ -1094,6 +1094,9 @@ function ganttYearHTML(list, fy){
       : "";
     const ownerPop = (ownerArr.length || e.note) ? `<div class="gc-pop">${ownerSec}${noteSec}</div>` : "";
     const md = `${ev.getMonth()+1}/${ev.getDate()}`;
+    const wide = width >= 12;                                   // バッジがバー内に収まる幅か
+    const badgeInside = prepDays>0 && wide;
+    const flagTxt = (prepDays>0 && !wide) ? `🚩${md} ・ 準備${prepDays}日` : `🚩${md}`;
     return `<div class="gc-row" onclick="openDetail('${e.id}')">
       <div class="gc-name"><span class="gc-dot" style="background:${c.color}"></span>${esc(e.name)}</div>
       <div class="gc-owner"><span class="gc-short">${esc(ownerShort)}</span>${ownerPop}</div>
@@ -1101,9 +1104,9 @@ function ganttYearHTML(list, fy){
         <div class="gc-lines">${lines}</div>
         ${todayLine}
         <div class="gc-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${esc(e.name)}（開催 ${md}${prepDays>0?" / 準備"+prepDays+"日":""}）">
-          ${prepDays>0?`<span class="gc-badge" style="color:${c.dark}">${overflow?"◀":""}準備${prepDays}日</span>`:""}
+          ${badgeInside?`<span class="gc-badge" style="color:${c.dark}">${overflow?"◀":""}準備${prepDays}日</span>`:""}
         </div>
-        <div class="gc-flag" style="left:${right}%;color:${c.dark};transform:${right>85?"translate(calc(-100% - 6px),-50%)":"translate(6px,-50%)"}">🚩${md}</div>
+        <div class="gc-flag" style="left:${right}%;color:${c.dark};transform:${right>85?"translate(calc(-100% - 6px),-50%)":"translate(6px,-50%)"}">${flagTxt}</div>
       </div>
     </div>`;
   }).join("");
