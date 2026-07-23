@@ -430,7 +430,6 @@
       <button class="btn btn-g" onclick="closeModal('detailModal')">閉じる</button>
       <button class="btn btn-del" id="dt_delseries" style="display:none" onclick="delSeries()">毎週分すべて削除</button>
       <button class="btn btn-del" id="dt_del" onclick="delFromDetail()">削除</button>
-      <button class="btn btn-edit" onclick="editFromDetail()">編集</button>
     </div>
   </div>
 </div>
@@ -776,7 +775,7 @@ function openDetail(eid){
   const prepDays = e.prep ? Math.round((new Date(e.date) - new Date(e.prep)) / 86400000) : 0;
   const prepStr = (e.prep && prepDays>0) ? `${e.prep.replace(/-/g,"/")} から（${prepDays}日前）` : "—";
   document.getElementById("dt_body").innerHTML = `
-    <div class="dt-row"><span class="dt-l">日付</span><span>${dstr}</span></div>
+    <div class="dt-row"><span class="dt-l">日付</span><span>${dstr}</span><button class="btn btn-edit btn-sm" style="margin-left:auto" onclick="editFromDetail()">編集</button></div>
     <div class="dt-row"><span class="dt-l">準備開始</span><span>🚩 ${prepStr}</span></div>
     <div class="dt-row"><span class="dt-l">カテゴリー</span><span class="cat" style="background:${catColor(e.cat)}">${esc(e.cat)}</span></div>
     <div class="dt-row"><span class="dt-l">部署</span><span>${esc(e.org)||'—'}</span></div>
