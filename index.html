@@ -161,11 +161,13 @@
   .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
   /* ガント（年度：準備期間） */
   .gantt-title{font-size:14px;font-weight:700;margin:0 0 4px;display:flex;align-items:center;gap:6px}
-  .gc{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-  .gc-row{display:grid;grid-template-columns:150px 96px 1fr;gap:10px;align-items:center;cursor:pointer}
-  .gc-head{cursor:default}
-  .gc-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .gc-owner{position:relative;font-size:11.5px;color:var(--sub)}
+  .gc{display:flex;flex-direction:column;margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .gc-row{display:grid;grid-template-columns:150px 96px 1fr;gap:10px;align-items:center;cursor:pointer;border-bottom:1px solid #eef1f6}
+  .gc-body .gc-row:nth-child(even){background:#fafbfd}
+  .gc-body .gc-row:last-child{border-bottom:none}
+  .gc-head{cursor:default;background:#f8fafc;border-bottom:1px solid var(--line)}
+  .gc-name{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:9px 0 9px 12px}
+  .gc-owner{position:relative;font-size:11.5px;color:var(--sub);padding:9px 6px}
   .gc-short{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gc-pop{position:absolute;left:0;top:calc(100% + 6px);z-index:20;background:#fff;border:1px solid var(--line);border-radius:10px;
           box-shadow:0 10px 26px rgba(0,0,0,.18);padding:8px 10px;min-width:150px;opacity:0;visibility:hidden;transform:translateY(-4px);transition:.14s}
@@ -175,21 +177,21 @@
   .gc-av{width:20px;height:20px;border-radius:50%;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none;font-weight:600}
   .gc-pop{max-width:280px}
   .gc-pop-body{font-size:11.5px;color:var(--ink);line-height:1.5;white-space:normal;word-break:break-word}
-  .gc-track{position:relative;height:26px;border:1px solid var(--line);border-radius:7px;background:#fbfcfe;overflow:hidden}
+  .gc-track{position:relative;height:42px;overflow:hidden}
   .gc-lines{position:absolute;inset:0;display:grid;grid-template-columns:repeat(12,1fr);pointer-events:none}
   .gc-lines span{border-left:1px solid #eef1f6}
   .gc-lines span:first-child{border-left:none}
   .gc-axis{border:none;background:none;height:auto;display:grid;grid-template-columns:repeat(12,1fr)}
   .gc-mcol{font-size:10px;color:var(--sub);text-align:center}
   .gc-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:0}
-  .gc-lines span:nth-child(even){background:#f6f8fc}
+  .gc-lines span:nth-child(even){background:#eef2f8}
   .gc-today{position:absolute;top:0;bottom:0;width:2px;background:#ef4444;opacity:.55;z-index:2;pointer-events:none}
-  .gc-bar{position:absolute;top:50%;transform:translateY(-50%);height:18px;min-width:14px;border-radius:20px;color:#fff;
-          font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:0 8px;white-space:nowrap;
-          box-shadow:0 1px 3px rgba(0,0,0,.2);transition:filter .1s ease, transform .1s ease;z-index:3}
+  .gc-bar{position:absolute;top:50%;transform:translateY(-50%);height:23px;min-width:16px;border-radius:20px;color:#fff;
+          font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:0 4px 0 10px;white-space:nowrap;
+          box-shadow:0 2px 5px rgba(0,0,0,.2);transition:filter .1s ease, transform .1s ease;z-index:3}
   .gc-row:hover .gc-bar{filter:brightness(1.07);transform:translateY(-50%) scale(1.01)}
-  .gc-prep{overflow:hidden;text-overflow:ellipsis;opacity:.95}
-  .gc-cap{flex:none;background:rgba(255,255,255,.25);border-radius:12px;padding:0 6px}
+  .gc-prep{overflow:hidden;text-overflow:ellipsis;opacity:.97}
+  .gc-cap{flex:none;background:#fff;border-radius:12px;padding:1px 7px;font-size:10px;font-weight:600}
   @media(max-width:820px){.gc-row{grid-template-columns:110px 70px 1fr}}
   /* 準備開始日のワンタッチ入力 */
   .prep-quick{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
@@ -1100,7 +1102,7 @@ function ganttYearHTML(list, fy){
         ${todayLine}
         <div class="gc-bar" style="left:${left}%;width:${width}%;background:${c.color}" title="${esc(e.name)}（開催 ${md}${prepDays>0?" / 準備"+prepDays+"日":""}）">
           <span class="gc-prep">${overflow?"◀":""}${prepDays>0?"準備"+prepDays+"日":""}</span>
-          <span class="gc-cap">🚩${md}</span>
+          <span class="gc-cap" style="color:${c.dark}">🚩${md}</span>
         </div>
       </div>
     </div>`;
@@ -1112,7 +1114,7 @@ function ganttYearHTML(list, fy){
       <div class="gc-owner" style="color:var(--sub);font-weight:600">担当者</div>
       <div class="gc-track gc-axis">${axis}</div>
     </div>
-    ${rowsH}
+    <div class="gc-body">${rowsH}</div>
   </div>`;
 }
 
