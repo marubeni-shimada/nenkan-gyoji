@@ -350,9 +350,9 @@
 <!-- 毎週の予定（モーダル） -->
 <div class="modal" id="recurModal">
   <div class="modal-card">
-    <div class="modal-head"><h2>🔁 毎週の予定を登録</h2><button class="modal-x" onclick="closeModal('recurModal')" aria-label="閉じる">✕</button></div>
+    <div class="modal-head"><h2>🔁 毎週の予定を登録</h2><span style="margin-left:auto;margin-right:12px;font-size:11.5px;color:#e11d48;font-weight:600;white-space:nowrap">※カレンダーのみ表示されます</span><button class="modal-x" onclick="closeModal('recurModal')" aria-label="閉じる">✕</button></div>
     <div class="modal-body">
-      <p class="muted" style="margin:0 0 10px">曜日と期間を指定すると、その曜日で毎週分をまとめて登録します。<b>カレンダーと全体</b>に表示され、後から1回ずつ削除できます。</p>
+      <p class="muted" style="margin:0 0 10px">曜日と期間を指定すると、その曜日で毎週分をまとめて登録します。<b>カレンダーのみ</b>に表示され、後から1回ずつ削除できます。</p>
       <div class="fgrid">
         <div class="fg2">
           <label>行事名 <span style="color:#ef4444">*</span></label>
@@ -455,6 +455,10 @@ const CATS = [
   {name:"会議",             color:"var(--c3)", tint:"#E0F2FE", dark:"#075985"},
   {name:"締め・報告",       color:"var(--c4)", tint:"#FCEBEB", dark:"#A32D2D"},
   {name:"出張",             color:"var(--c5)", tint:"#FAEEDA", dark:"#854F0B"},
+  {name:"認証・監査",       color:"#0d9488",   tint:"#E0F2F1", dark:"#115E59"},
+  {name:"採用活動",         color:"#e11d48",   tint:"#FBEAF0", dark:"#9F1239"},
+  {name:"会社行事",         color:"#4f46e5",   tint:"#EEF2FF", dark:"#3730A3"},
+  {name:"体験",             color:"#65a30d",   tint:"#EAF3DE", dark:"#3B6D11"},
   {name:"その他",           color:"var(--c6)", tint:"#F1F5F9", dark:"#475569"},
 ];
 function catObj(name){ return CATS.find(x=>x.name===name) || {color:"var(--c6)",tint:"#F1F5F9",dark:"#475569"}; }
