@@ -274,7 +274,7 @@
         <a id="navYear" onclick="setView('year')"><span class="ic">▦</span>全体</a>
         <a id="navGantt" onclick="setView('gantt')"><span class="ic">📊</span>ガント</a>
         <a onclick="toggleAdmin()"><span class="ic">👥</span>名簿管理</a>
-        <a onclick="window.print()"><span class="ic">🖨</span>印刷 / PDF</a>
+        <a onclick="printOnePage()"><span class="ic">🖨</span>印刷 / PDF</a>
       </div>
     </div>
     <div class="side-block">
@@ -1134,6 +1134,18 @@ function ganttYearHTML(list, fy){
     </div>
     <div class="gc-body">${rowsH}</div>
   </div>`;
+}
+
+/* 印刷/PDF：内容を1ページに収まるよう自動縮小してから印刷 */
+function printOnePage(){
+  const main = document.querySelector(".main");
+  const PW = 1040, PH = 700;                 // 横向きA4・余白10mmの概算印刷領域(px)
+  const cw = main.scrollWidth, ch = main.scrollHeight;
+  const z = Math.max(0.4, Math.min(PW/cw, PH/ch, 1));
+  main.style.zoom = z;
+  const reset = ()=>{ main.style.zoom = ""; window.removeEventListener("afterprint", reset); };
+  window.addEventListener("afterprint", reset);
+  setTimeout(()=>{ window.print(); }, 60);
 }
 
 /* ===== 初期化 ===== */
