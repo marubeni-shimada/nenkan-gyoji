@@ -410,7 +410,8 @@
     <div class="modal-body" id="dt_body"></div>
     <div class="modal-foot">
       <button class="btn btn-g" onclick="closeModal('detailModal')">閉じる</button>
-      <button class="btn btn-del" onclick="delFromDetail()">削除</button>
+      <button class="btn btn-del" id="dt_delseries" style="display:none" onclick="delSeries()">毎週分すべて削除</button>
+      <button class="btn btn-del" id="dt_del" onclick="delFromDetail()">削除</button>
       <button class="btn btn-edit" onclick="editFromDetail()">編集</button>
     </div>
   </div>
@@ -744,9 +745,13 @@ async function saveRecur(){
 
 /* 詳細表示 */
 let detailId = null;
+let detailSeries = null;
 function openDetail(eid){
   const e = events.find(x=>x.id===eid); if(!e) return;
   detailId = eid;
+  detailSeries = e.series || null;
+  document.getElementById("dt_delseries").style.display = e.series ? "inline-block" : "none";
+  document.getElementById("dt_del").textContent = e.series ? "この回だけ削除" : "削除";
   document.getElementById("dt_name").textContent = e.name;
   const dt = e.date ? new Date(e.date) : null;
   const dstr = dt ? `${e.date.replace(/-/g,'/')}（${WD[dt.getDay()]}）` : "—";
@@ -766,6 +771,25 @@ function openDetail(eid){
 }
 function editFromDetail(){ closeModal("detailModal"); if(detailId) edit(detailId); }
 async function delFromDetail(){ const id=detailId; closeModal("detailModal"); if(id) await del(id); }
+async function delSeries(){
+  const s = detailSeries; if(!s) return;
+  const cnt = events.filter(e=>e.series===s).length;
+  if(!confirm(`この毎週の予定を全${cnt}回分すべて削除しますか？`)) return;
+  closeModal("detailModal");
+  if(USE_API){
+    setLoading(true, "削除中…");
+    try{
+      const r = await fetch(API, {method:"POST", body: JSON.stringify({action:"deleteSeries", series:s})});
+      const d = await r.json();
+      if(d && Array.isArray(d.events)) events = d.events.map(e=>({...e, date:toYMD(e.date), prep:toYMD(e.prep)}));
+    }catch(err){ alert("削除に失敗しました: "+err); }
+    finally{ setLoading(false); }
+  }else{
+    events = events.filter(e=>e.series!==s);
+    localStorage.setItem(KEY, JSON.stringify(events));
+  }
+  fillFY(); render();
+}
 
 /* ===== フォーム操作 ===== */
 async function save(){
